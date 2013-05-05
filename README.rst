@@ -25,6 +25,23 @@ Re-format tool for vsl(varnishlog)
 HOW TO USE
 ===========
 
+Read from varnish process.(use libvarnishapi)
+***********************************************
+::
+
+  normal
+    python vsltrans.py
+  
+  Specify libvarnishapi
+    python vsltrans.py -libvapi /usr/lib64/libvarnishapi.so.1
+
+Read from logfile
+***********************************************
+::
+
+  normal
+    python vsltrans.py -f test.log
+
 
 Original log
 ---------------------------------------
