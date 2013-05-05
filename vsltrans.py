@@ -43,15 +43,15 @@ class VarnishLog:
 	rfmt      = 0
 	libvap    = 'libvarnishapi.so.1'
 
-	#Trx–ˆ‚ÉŠi”[
+	#Trxæ¯ã«æ ¼ç´
 	obj = {
 		1 : {}, #client
 		2 : {}, #backend
 	}
-	#ƒp[ƒX‘O‚Ìƒf[ƒ^•Û‘¶—Ìˆæ
+	#ãƒ‘ãƒ¼ã‚¹å‰ã®ãƒ‡ãƒ¼ã‚¿ä¿å­˜é ˜åŸŸ
 	vslData = []
 
-	#o—Í‡
+	#å‡ºåŠ›é †
 	prnVarOrder = [
 		'client',
 		'server',
@@ -64,7 +64,7 @@ class VarnishLog:
 		]
 
 	def __init__(self):
-		#ƒtƒ@ƒCƒ‹“ü—Í—p‚Ì³‹K•\Œ»
+		#ãƒ•ã‚¡ã‚¤ãƒ«å…¥åŠ›ç”¨ã®æ­£è¦è¡¨ç¾
 		self.rfmt = re.compile('^([^ ]+) +([^ ]+) +([^ ]+) +(.*)$')
 		
 		self.filter     = {
@@ -183,7 +183,7 @@ class VarnishLog:
 		self.vslutil = varnishapi.VSLUtil()
 		self.tags    = self.vslutil.tags
 		
-	#ƒtƒBƒ‹ƒ^‚Ìƒ‹[ƒv
+	#ãƒ•ã‚£ãƒ«ã‚¿ã®ãƒ«ãƒ¼ãƒ—
 	def loopFilter(self, base):
 		raw    = base['raw']
 		curidx = base['curidx']
@@ -198,7 +198,7 @@ class VarnishLog:
 				else:
 					self.filter[type][tag](base,v)
 
-	#ƒoƒbƒNƒGƒ“ƒhî•ñ‚ÌŠi”[
+	#ãƒãƒƒã‚¯ã‚¨ãƒ³ãƒ‰æƒ…å ±ã®æ ¼ç´
 	def filterBackend(self, base, rawline):
 		curidx          = base['curidx']
 		data            = base['data'][curidx]['backend']
@@ -226,7 +226,7 @@ class VarnishLog:
 		for k,v in bvar.items():
 			cvar[k] = v
 	
-	#length‚ğæ“¾
+	#lengthã‚’å–å¾—
 	def filterLength(self, base, rawline):
 
 		curidx          = base['curidx']
@@ -234,14 +234,14 @@ class VarnishLog:
 		base['data'][curidx]['length'] = int(rawline['msg'])
 
 	
-	#trace‚ğ‰ğß
+	#traceã‚’è§£é‡ˆ
 	def filterTrace(self, base, rawline):
 		spl  = rawline['msg'].split(' ')
 		spl2 = spl[1].split('.')
 		
 		rawline['aliasmsg'] = '(VRT_Count:%s line:%s pos:%s)' % (spl[0], spl2[0], spl2[1])
 	
-	#errorŒn‚ğŠi”[
+	#errorç³»ã‚’æ ¼ç´
 	def filterError(self, base, rawline):
 		curidx     = base['curidx']
 		data       = base['data'][curidx]['error']
@@ -257,7 +257,7 @@ class VarnishLog:
 		   'typeName': 'c'},
 		'''
 	
-	#Action“à‚ÌƒAƒCƒeƒ€‚ğŠi”[
+	#Actionå†…ã®ã‚¢ã‚¤ãƒ†ãƒ ã‚’æ ¼ç´
 	def filterActItem(self, base, rawline):
 		curidx     = base['curidx']
 		curactidx  = base['data'][curidx]['curactidx']
@@ -269,7 +269,7 @@ class VarnishLog:
 		else:
 			data.append({'key' : rawline['tag'],'val' : rawline['msg']})
 	
-	#ÀsŠÔ‚ğæ“¾
+	#å®Ÿè¡Œæ™‚é–“ã‚’å–å¾—
 	def filterReqEnd(self, base, rawline):
 		spl                          = rawline['msg'].split(' ')
 		curidx                       = base['curidx']
@@ -281,7 +281,7 @@ class VarnishLog:
 		data['execute'] = float(spl[4])
 		data['exit']    = float(spl[5])
 
-	#ƒAƒNƒVƒ‡ƒ“‚ğ\’z
+	#ã‚¢ã‚¯ã‚·ãƒ§ãƒ³ã‚’æ§‹ç¯‰
 	def filterAction(self, base, rawline):
 	
 		#12 VCL_call     c fetch 3 41.9 23 103.5 24 109.17
@@ -293,7 +293,7 @@ class VarnishLog:
 		ret            = ''
 		item           = []
 		tracetmp       = ''
-		#trace‚Æreturn‚ğ\’z
+		#traceã¨returnã‚’æ§‹ç¯‰
 		if(len(spl) > 1):
 			for v in spl:
 				if v[0].isdigit():
@@ -324,7 +324,7 @@ class VarnishLog:
 			curactidx = base['data'][curidx]['curactidx']
 			data[curactidx]['return'] = msg
 			
-			#restart‚ÆESI‚Ìê‡‚ÍIncr‚·‚é
+			#restartã¨ESIã®å ´åˆã¯Incrã™ã‚‹
 			if msg == 'restart':
 				self.incrData(base, 'restart')
 			
@@ -333,7 +333,7 @@ class VarnishLog:
 			base['data'][curidx]['curactidx'] += 1
 			data.append({'function' : msg,'return' : ret,'item' : item})
 
-	#ƒNƒ‰ƒCƒAƒ“ƒgî•ñæ“¾
+	#ã‚¯ãƒ©ã‚¤ã‚¢ãƒ³ãƒˆæƒ…å ±å–å¾—
 	def filterReqStart(self, base, rawline):
 		#                    client.ip   port     xid
 		#          'msg': '192.168.1.199 47475 1642652384',
@@ -353,7 +353,7 @@ class VarnishLog:
 			'val'  : spl[2],
 			}]
 
-	#restart,ESI‚Ìî•ñ‚ğ\’z
+	#restart,ESIã®æƒ…å ±ã‚’æ§‹ç¯‰
 	def conRestartESI(self,base):
 		restart = 0
 		esi     = 0
@@ -371,7 +371,7 @@ class VarnishLog:
 		base['info']['esi']         = esi
 		#base['info']['extraLength'] = length
 
-	#vary‚Ìî•ñ‚ğ\’z
+	#varyã®æƒ…å ±ã‚’æ§‹ç¯‰
 	def conVary(self,base):
 		for trx in base['data']:
 			var = trx['var']
@@ -389,13 +389,13 @@ class VarnishLog:
 										trx['hash']['vary'].append({'key' : tgkey, 'val' : val})
 								if val == '':
 									trx['hash']['vary'].append({'key' : tgkey, 'val' : ''})
-	#ƒnƒbƒVƒ…î•ñ‚ğŠi”[
+	#ãƒãƒƒã‚·ãƒ¥æƒ…å ±ã‚’æ ¼ç´
 	def filterHash(self, base, rawline):
 		curidx = base['curidx']
 		data   = base['data'][curidx]['hash']['hash']
 		data.append(rawline['msg'])
 
-	#req.url‚È‚Ç‚ğŠi”[
+	#req.urlãªã©ã‚’æ ¼ç´
 	def filterRequest(self, base, rawline):
 		curidx = base['curidx']
 		data   = base['data'][curidx]['var']
@@ -417,7 +417,7 @@ class VarnishLog:
 			data[cmpo][prop].append({'key':'', 'lkey':'', 'val':msg})
 			
 	
-	#ƒAƒNƒZƒX‚ğ•ªŠ„‚·‚éƒZƒpƒŒ[ƒ^
+	#ã‚¢ã‚¯ã‚»ã‚¹ã‚’åˆ†å‰²ã™ã‚‹ã‚»ãƒ‘ãƒ¬ãƒ¼ã‚¿
 	reqsep  = {
 		1 : {
 			'open' : {
@@ -440,7 +440,7 @@ class VarnishLog:
 		}
 	
 	
-	#ƒf[ƒ^”z—ñ‚Ìì¬
+	#ãƒ‡ãƒ¼ã‚¿é…åˆ—ã®ä½œæˆ
 	def incrData(self,base, info=''):
 		if not base.has_key('data'):
 			base['data']   = []
@@ -457,7 +457,7 @@ class VarnishLog:
 			})
 		base['curidx'] += 1
 	
-	#ƒgƒ‰ƒ“ƒUƒNƒVƒ‡ƒ“ƒf[ƒ^‚ğƒRƒ~ƒbƒg
+	#ãƒˆãƒ©ãƒ³ã‚¶ã‚¯ã‚·ãƒ§ãƒ³ãƒ‡ãƒ¼ã‚¿ã‚’ã‚³ãƒŸãƒƒãƒˆ
 	def commitTrx(self, type, fd):
 		#if type == 2:
 		#	return
@@ -471,24 +471,24 @@ class VarnishLog:
 		self.incrData(base)
 		
 		#######################
-		#‚±‚±‚©‚çÚ×ƒf[ƒ^ì¬
+		#ã“ã“ã‹ã‚‰è©³ç´°ãƒ‡ãƒ¼ã‚¿ä½œæˆ
 
-		#ƒ^ƒO–¼‚ğ•t—^
+		#ã‚¿ã‚°åã‚’ä»˜ä¸
 		self.apdTagName(raw)
 
-		#ƒtƒBƒ‹ƒ^Às
+		#ãƒ•ã‚£ãƒ«ã‚¿å®Ÿè¡Œ
 		self.loopFilter(base)
 		
-		#Varyî•ñ‚Ìæ“¾
+		#Varyæƒ…å ±ã®å–å¾—
 		self.conVary(base)
 		
-		#restart/ESIî•ñ‚Ìì¬
+		#restart/ESIæƒ…å ±ã®ä½œæˆ
 		self.conRestartESI(base)
 		
 		#######################
 		#for client
 		if type == 1:
-			#client/server.ip•t—^
+			#client/server.ipä»˜ä¸
 			self.setVarClientServer(base)
 
 
@@ -500,26 +500,26 @@ class VarnishLog:
 		base           = self.obj[type][fd][-1]
 		
 		#print var
-		#ˆê’UƒeƒXƒg‚Å0‚ğw’è‚µ‚Ä‚¢‚éirestart‚Æ‚©‚É‚È‚é‚Æ•Ï‚í‚é‚Ì‚Å’ˆÓj
+		#ä¸€æ—¦ãƒ†ã‚¹ãƒˆã§0ã‚’æŒ‡å®šã—ã¦ã„ã‚‹ï¼ˆrestartã¨ã‹ã«ãªã‚‹ã¨å¤‰ã‚ã‚‹ã®ã§æ³¨æ„ï¼‰
 		idx = 0
 		
 		self.printLine('<')
 		print 'START transaction.'
 		self.printLine('<')
-		#‘S‘Ì‚ÌInfo‚ğo—Í
+		#å…¨ä½“ã®Infoã‚’å‡ºåŠ›
 		self.printGeneralInfo(base)
 		for idx in range(base['curidx'] + 1):
 
-			#ŒÂ•Ê‚ÌInfo‚ğo—Í
+			#å€‹åˆ¥ã®Infoã‚’å‡ºåŠ›
 			self.printInfo(base,idx)
 
-			#ƒGƒ‰[‚ğ•\¦
+			#ã‚¨ãƒ©ãƒ¼ã‚’è¡¨ç¤º
 			self.printError(base,idx)
 
-			#ƒAƒNƒVƒ‡ƒ“‚ğ•\¦
+			#ã‚¢ã‚¯ã‚·ãƒ§ãƒ³ã‚’è¡¨ç¤º
 			self.printAction(base,idx)
 
-			#•Ï”î•ñ‚ğ•\¦
+			#å¤‰æ•°æƒ…å ±ã‚’è¡¨ç¤º
 			self.printVariable(base,idx)
 
 		self.printLine('>')
@@ -717,7 +717,7 @@ class VarnishLog:
 					maxLen = length
 		return maxLen
 	
-	#client.*‚Æserver.*‚ğİ’èiserver‚Íƒf[ƒ^Œ³‚ª‚È‚¢‚Ì‚ÅEEEj
+	#client.*ã¨server.*ã‚’è¨­å®šï¼ˆserverã¯ãƒ‡ãƒ¼ã‚¿å…ƒãŒãªã„ã®ã§ãƒ»ãƒ»ãƒ»ï¼‰
 	def setVarClientServer(self,base):
 		data   = base['data']
 		for var in data:
@@ -729,16 +729,16 @@ class VarnishLog:
 					}]
 				}
 
-	#ƒ^ƒO‚Ì–¼Ì’Ç‰Á
+	#ã‚¿ã‚°ã®åç§°è¿½åŠ 
 	def apdTagName(self,raw):
 		for v in raw:
 			v['tagname'] = self.tags[v['type']][v['tag']]
 	
-	#ƒgƒ‰ƒ“ƒUƒNƒVƒ‡ƒ“‚²‚Æ‚Ìƒf[ƒ^ì¬
+	#ãƒˆãƒ©ãƒ³ã‚¶ã‚¯ã‚·ãƒ§ãƒ³ã”ã¨ã®ãƒ‡ãƒ¼ã‚¿ä½œæˆ
 	def conTrx(self,r):
 		if not r:
 			return
-		#’l‚ğì¬
+		#å€¤ã‚’ä½œæˆ
 		type = r['type']
 		if type == 0:
 			return
@@ -746,38 +746,38 @@ class VarnishLog:
 		tag  = r['tag']
 		fd   = r['fd']
 		if self.obj[type].has_key(fd):
-			#ŠJ‚¢‚Ä‚é
+			#é–‹ã„ã¦ã‚‹
 			if self.reqsep[type]['close'].has_key(tag):
-				#•Â‚¶‚é(Print‘ÎÛj
+				#é–‰ã˜ã‚‹(Printå¯¾è±¡ï¼‰
 				self.obj[type][fd][-1]['raw'].append(r)
 
 				self.commitTrx(type,fd)
 				self.printTrx(type,fd)
 				if type == 1:
-					#ƒf[ƒ^íœ(Client‚Ìê‡‚Ì‚İ)
+					#ãƒ‡ãƒ¼ã‚¿å‰Šé™¤(Clientã®å ´åˆã®ã¿)
 					del self.obj[type][fd]
 			elif self.reqsep[type]['open'].has_key(tag):
 				if type == 1: #client
-					#ŠJ‚­iƒoƒbƒNƒGƒ“ƒh‚©‰½‚©‚µ‚ç‚ÌƒoƒOj
+					#é–‹ãï¼ˆãƒãƒƒã‚¯ã‚¨ãƒ³ãƒ‰ã‹ä½•ã‹ã—ã‚‰ã®ãƒã‚°ï¼‰
 					del self.obj[type][fd]
 					self.obj[type][fd] = [{'raw' : []}]
 					self.obj[type][fd][-1]['raw'].append(r)
 				elif type == 2:#Backend
-					#ŠJ‚­iƒoƒbƒNƒGƒ“ƒh‚©‰½‚©‚µ‚ç‚ÌƒoƒOj
-					#ESI‘Î‰‚Åg‚í‚ê‚½‚©‚Ìƒ`ƒFƒbƒN‚ğs‚¤
+					#é–‹ãï¼ˆãƒãƒƒã‚¯ã‚¨ãƒ³ãƒ‰ã‹ä½•ã‹ã—ã‚‰ã®ãƒã‚°ï¼‰
+					#ESIå¯¾å¿œã§ä½¿ã‚ã‚ŒãŸã‹ã®ãƒã‚§ãƒƒã‚¯ã‚’è¡Œã†
 					#del self.obj[type][fd]
 					self.obj[type][fd].append({'raw' : []})
 					self.obj[type][fd][-1]['raw'].append(r)
 
 			else:
-				#’ÊíŠi”[
+				#é€šå¸¸æ ¼ç´
 				self.obj[type][fd][-1]['raw'].append(r)
 		elif self.reqsep[type]['open'].has_key(tag):
-			#ŠJ‚­
+			#é–‹ã
 			self.obj[type][fd] = [{'raw':[]}]
 			self.obj[type][fd][-1]['raw'].append(r)
 
-	#ƒXƒŒƒbƒhü‚è‚Ìˆ—
+	#ã‚¹ãƒ¬ãƒƒãƒ‰å‘¨ã‚Šã®å‡¦ç†
 	def sighandler(self,event, signr, handler):
 		event.set()
 		
@@ -824,7 +824,7 @@ class VarnishLog:
 		e = threading.Event()
 		signal.signal(signal.SIGINT, (lambda a, b: self.sighandler(e, a, b)))
 
-		# ƒXƒŒƒbƒhì¬
+		# ã‚¹ãƒ¬ãƒƒãƒ‰ä½œæˆ
 		#if self.vap:
 		threads.append(threading.Thread(target=inloop, args=(e,)))
 		threads[-1].start()
@@ -832,7 +832,7 @@ class VarnishLog:
 		threads.append(threading.Thread(target=self.printLoop, args=(e,)))
 		threads[-1].start()
 
-		# I—¹‘Ò‚¿
+		# çµ‚äº†å¾…ã¡
 		for th in threads:
 			while th.isAlive():
 				time.sleep(0.5)
@@ -852,7 +852,7 @@ class VarnishLog:
 		 'tag': 'CLI',
 		 'type': 0L,
 		 'typeName': '-'}
-		ƒf[ƒ^‚ğ“Ç‚İ‚Şê‡
+		ãƒ‡ãƒ¼ã‚¿ã‚’èª­ã¿è¾¼ã‚€å ´åˆ
 		 1284 RxHeader     b Content-Type: image/png
 
 		'''
@@ -903,34 +903,34 @@ def dump(obj):
   '''return a printable representation of an object for debugging'''
   newobj = obj
   if isinstance(obj, list):
-    # ƒŠƒXƒg‚Ì’†g‚ğ•\¦‚Å‚«‚éŒ`®‚É‚·‚é
+    # ãƒªã‚¹ãƒˆã®ä¸­èº«ã‚’è¡¨ç¤ºã§ãã‚‹å½¢å¼ã«ã™ã‚‹
     newobj = []
     for item in obj:
       newobj.append(dump(item))
   elif isinstance(obj, tuple):
-    # ƒ^ƒvƒ‹‚Ì’†g‚ğ•\¦‚Å‚«‚éŒ`®‚É‚·‚é
+    # ã‚¿ãƒ—ãƒ«ã®ä¸­èº«ã‚’è¡¨ç¤ºã§ãã‚‹å½¢å¼ã«ã™ã‚‹
     temp = []
     for item in obj:
       temp.append(dump(item))
     newobj = tuple(temp)
   elif isinstance(obj, set):
-    # ƒZƒbƒg‚Ì’†g‚ğ•\¦‚Å‚«‚éŒ`®‚É‚·‚é
+    # ã‚»ãƒƒãƒˆã®ä¸­èº«ã‚’è¡¨ç¤ºã§ãã‚‹å½¢å¼ã«ã™ã‚‹
     temp = []
     for item in obj:
-      # item‚ªclass‚Ìê‡‚Ídump()‚Í«‘‚ğ•Ô‚·‚ª,«‘‚Íset‚Åg—p‚Å‚«‚È‚¢‚Ì‚Å•¶š—ñ‚É‚·‚é
+      # itemãŒclassã®å ´åˆã¯dump()ã¯è¾æ›¸ã‚’è¿”ã™ãŒ,è¾æ›¸ã¯setã§ä½¿ç”¨ã§ããªã„ã®ã§æ–‡å­—åˆ—ã«ã™ã‚‹
       temp.append(str(dump(item)))
     newobj = set(temp)
   elif isinstance(obj, dict):
-    # «‘‚Ì’†giƒL[A’lj‚ğ•\¦‚Å‚«‚éŒ`®‚É‚·‚é
+    # è¾æ›¸ã®ä¸­èº«ï¼ˆã‚­ãƒ¼ã€å€¤ï¼‰ã‚’è¡¨ç¤ºã§ãã‚‹å½¢å¼ã«ã™ã‚‹
     newobj = {}
     for key, value in obj.items():
-      # key‚ªclass‚Ìê‡‚Ídump()‚Ídict‚ğ•Ô‚·‚ª,dict‚ÍƒL[‚É‚È‚ê‚È‚¢‚Ì‚Å•¶š—ñ‚É‚·‚é
+      # keyãŒclassã®å ´åˆã¯dump()ã¯dictã‚’è¿”ã™ãŒ,dictã¯ã‚­ãƒ¼ã«ãªã‚Œãªã„ã®ã§æ–‡å­—åˆ—ã«ã™ã‚‹
       newobj[str(dump(key))] = dump(value)
   elif isinstance(obj, types.FunctionType):
-    # ŠÖ”‚ğ•\¦‚Å‚«‚éŒ`®‚É‚·‚é
+    # é–¢æ•°ã‚’è¡¨ç¤ºã§ãã‚‹å½¢å¼ã«ã™ã‚‹
     newobj = repr(obj)
   elif '__dict__' in dir(obj):
-    # V‚µ‚¢Œ`®‚ÌƒNƒ‰ƒX class Hoge(object)‚ÌƒCƒ“ƒXƒ^ƒ“ƒX‚Í__dict__‚ğ‚Á‚Ä‚¢‚é
+    # æ–°ã—ã„å½¢å¼ã®ã‚¯ãƒ©ã‚¹ class Hoge(object)ã®ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã¯__dict__ã‚’æŒã£ã¦ã„ã‚‹
     newobj = obj.__dict__.copy()
     if ' object at ' in str(obj) and not '__type__' in newobj:
       newobj['__type__']=str(obj).replace(" object at ", " #").replace("__main__.", "")
