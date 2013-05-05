@@ -4,20 +4,8 @@ import varnishapi
 import threading,time,signal,copy,sys,re,os
 
 
-#
-#restart対策で複数のreq.httpとかを持てるようにする
-#
 
 
-'''
-アクセスの開始
-	ReqStart　～　ReqEnd
-
-	BackendReuse　～　Length
-	BackendOpen　～　BackendClose
-
-
-'''
 def main():
 
 	argv = sys.argv
@@ -41,9 +29,11 @@ def main():
 		vsl.runFILE(opt['-f'][0])
 	else:
 		vsl.runVSL()
-	
+
+
 
 class VarnishLog:
+
 	tags      = 0
 	vap       = 0
 	vslutil   = 0
@@ -52,6 +42,16 @@ class VarnishLog:
 	logfile   = ''
 	rfmt      = 0
 	libvap    = 'libvarnishapi.so.1'
+
+	#Trx毎に格納
+	obj = {
+		1 : {}, #client
+		2 : {}, #backend
+	}
+	#パース前のデータ保存領域
+	vslData = []
+
+	#出力順
 	prnVarOrder = [
 		'client',
 		'server',
@@ -62,13 +62,131 @@ class VarnishLog:
 		'resp',
 		'storage',
 		]
-	
+
+	def __init__(self):
+		#ファイル入力用の正規表現
+		self.rfmt = re.compile('^([^ ]+) +([^ ]+) +([^ ]+) +(.*)$')
+		
+		self.filter     = {
+			0:{},
+			#Client
+			1:{
+				#"Debug"				:"",
+				#"Error"				:"",
+				#"CLI"				:"",
+				#"StatSess"			:"",
+				"ReqEnd"			: self.filterReqEnd,
+				#"SessionOpen"		:"",
+				#"SessionClose"		:"",
+				#"BackendOpen"		:"",
+				#"BackendXID"		:"",
+				#"BackendReuse"		:"",
+				#"BackendClose"		:"",
+				#"HttpGarbage"		:"",
+				"Backend"			: self.filterBackend,
+				"Length"			: self.filterLength,
+				"FetchError"		: self.filterError,
+				"RxRequest"			: self.filterRequest,
+				#"RxResponse"		:"",
+				#"RxStatus"			:"",
+				"RxURL"				: self.filterRequest,
+				"RxProtocol"		: self.filterRequest,
+				"RxHeader"			: self.filterRequest,
+				#"TxRequest"			:"",
+				"TxResponse"		: self.filterRequest,
+				"TxStatus"			: self.filterRequest,
+				#"TxURL"				:"",
+				"TxProtocol"		: self.filterRequest,
+				"TxHeader"			: self.filterRequest,
+				#"ObjRequest"		:"",
+				"ObjResponse"		: self.filterRequest,
+				#"ObjStatus"			:"",
+				#"ObjURL"			:"",
+				"ObjProtocol"		: self.filterRequest,
+				"ObjHeader"			: self.filterRequest,
+				#"LostHeader"		:"",
+				#"TTL"				:"",
+				#"Fetch_Body"		:"",
+				#"VCL_acl"			:"",
+				"VCL_call"			: self.filterAction,
+				"VCL_trace"			: [self.filterTrace, self.filterActItem],
+				"VCL_return"		: self.filterAction,
+				#"VCL_error"			:"",
+				"ReqStart"			: self.filterReqStart,
+				#"Hit"				:"",
+				#"HitPass"			:"",
+				#"ExpBan"			:"",
+				#"ExpKill"			:"",
+				#"WorkThread"		:"",
+				"ESI_xmlerror"		: self.filterError,
+				"Hash"				: [self.filterHash, self.filterActItem],
+				#"Backend_health"	:"",
+				"VCL_Log"			: self.filterActItem,
+				#"Gzip"				:"",
+			},
+			#Backend
+			2:{
+				#"Debug"				:"",
+				#"Error"				:"",
+				#"CLI"				:"",
+				#"StatSess"			:"",
+				#"ReqEnd"			:"",
+				#"SessionOpen"		:"",
+				#"SessionClose"		:"",
+				#"BackendOpen"		:"",
+				#"BackendXID"		:"",
+				#"BackendReuse"		:"",
+				#"BackendClose"		:"",
+				#"HttpGarbage"		:"",
+				#"Backend"			:"",
+				"Length"			: self.filterLength,
+				#"FetchError"		:"",
+				#"RxRequest"			:"",
+				"RxResponse"		: self.filterRequest,
+				"RxStatus"			: self.filterRequest,
+				"RxURL"				: self.filterRequest,
+				"RxProtocol"		: self.filterRequest,
+				"RxHeader"			: self.filterRequest,
+				"TxRequest"			: self.filterRequest,
+				#"TxResponse"		:"",
+				#"TxStatus"			:"",
+				"TxURL"				: self.filterRequest,
+				"TxProtocol"		: self.filterRequest,
+				"TxHeader"			: self.filterRequest,
+				#"ObjRequest"		:"",
+				#"ObjResponse"		:"",
+				#"ObjStatus"			:"",
+				#"ObjURL"			:"",
+				#"ObjProtocol"		:"",
+				#"ObjHeader"			:"",
+				#"LostHeader"		:"",
+				#"TTL"				:"",
+				#"Fetch_Body"		:"",
+				#"VCL_acl"			:"",
+				#"VCL_call"			:"",
+				#"VCL_trace"			:"",
+				#"VCL_return"		:"",
+				#"VCL_error"			:"",
+				#"ReqStart"			:"",
+				#"Hit"				:"",
+				#"HitPass"			:"",
+				#"ExpBan"			:"",
+				#"ExpKill"			:"",
+				#"WorkThread"		:"",
+				#"ESI_xmlerror"		:"",
+				#"Hash"				:"",
+				#"Backend_health"	:"",
+				#"VCL_Log"			:"",
+				#"Gzip"				:"",
+			},
+		}
+		self.vslutil = varnishapi.VSLUtil()
+		self.tags    = self.vslutil.tags
+		
 	#フィルタのループ
 	def loopFilter(self, base):
 		raw    = base['raw']
 		curidx = base['curidx']
-		
-		
 		
 		for v in raw:
 			type = v['type']
@@ -271,7 +389,7 @@ class VarnishLog:
 										trx['hash']['vary'].append({'key' : tgkey, 'val' : val})
 								if val == '':
 									trx['hash']['vary'].append({'key' : tgkey, 'val' : ''})
-							
+	#ハッシュ情報を格納
 	def filterHash(self, base, rawline):
 		curidx = base['curidx']
 		data   = base['data'][curidx]['hash']['hash']
@@ -298,10 +416,6 @@ class VarnishLog:
 		else:
 			data[cmpo][prop].append({'key':'', 'lkey':'', 'val':msg})
 			
-	obj = {
-		1 : {}, #client
-		2 : {}, #backend
-	}
 	
 	#アクセスを分割するセパレータ
 	reqsep  = {
@@ -325,8 +439,6 @@ class VarnishLog:
 			},
 		}
 	
-	#パース前のデータ保存領域
-	vslData = []
 	
 	#データ配列の作成
 	def incrData(self,base, info=''):
@@ -358,7 +470,6 @@ class VarnishLog:
 
 		self.incrData(base)
 		
-		#後でcuridx対応を行う
 		#######################
 		#ここから詳細データ作成
 
@@ -766,125 +877,7 @@ class VarnishLog:
 		self.vslData.append(r)
 
 		
-	def __init__(self):
-		self.rfmt = re.compile('^([^ ]+) +([^ ]+) +([^ ]+) +(.*)$')
-		
-		self.filter     = {#後で関数にする
-			0:{},
-			#Client
-			1:{
-				#"Debug"				:"",
-				#"Error"				:"",
-				#"CLI"				:"",
-				#"StatSess"			:"",
-				"ReqEnd"			: self.filterReqEnd,
-				#"SessionOpen"		:"",
-				#"SessionClose"		:"",
-				#"BackendOpen"		:"",
-				#"BackendXID"		:"",
-				#"BackendReuse"		:"",
-				#"BackendClose"		:"",
-				#"HttpGarbage"		:"",
-				"Backend"			: self.filterBackend,
-				"Length"			: self.filterLength,
-				"FetchError"		: self.filterError,
-				"RxRequest"			: self.filterRequest,
-				#"RxResponse"		:"",
-				#"RxStatus"			:"",
-				"RxURL"				: self.filterRequest,
-				"RxProtocol"		: self.filterRequest,
-				"RxHeader"			: self.filterRequest,
-				#"TxRequest"			:"",
-				"TxResponse"		: self.filterRequest,
-				"TxStatus"			: self.filterRequest,
-				#"TxURL"				:"",
-				"TxProtocol"		: self.filterRequest,
-				"TxHeader"			: self.filterRequest,
-				#"ObjRequest"		:"",
-				"ObjResponse"		: self.filterRequest,
-				#"ObjStatus"			:"",
-				#"ObjURL"			:"",
-				"ObjProtocol"		: self.filterRequest,
-				"ObjHeader"			: self.filterRequest,
-				#"LostHeader"		:"",
-				#"TTL"				:"",
-				#"Fetch_Body"		:"",
-				#"VCL_acl"			:"",
-				"VCL_call"			: self.filterAction,
-				"VCL_trace"			: [self.filterTrace, self.filterActItem],
-				"VCL_return"		: self.filterAction,
-				#"VCL_error"			:"",
-				"ReqStart"			: self.filterReqStart,
-				#"Hit"				:"",
-				#"HitPass"			:"",
-				#"ExpBan"			:"",
-				#"ExpKill"			:"",
-				#"WorkThread"		:"",
-				"ESI_xmlerror"		: self.filterError,
-				"Hash"				: [self.filterHash, self.filterActItem],
-				#"Backend_health"	:"",
-				"VCL_Log"			: self.filterActItem,
-				#"Gzip"				:"",
-			},
-			#Backend
-			2:{
-				#"Debug"				:"",
-				#"Error"				:"",
-				#"CLI"				:"",
-				#"StatSess"			:"",
-				#"ReqEnd"			:"",
-				#"SessionOpen"		:"",
-				#"SessionClose"		:"",
-				#"BackendOpen"		:"",
-				#"BackendXID"		:"",
-				#"BackendReuse"		:"",
-				#"BackendClose"		:"",
-				#"HttpGarbage"		:"",
-				#"Backend"			:"",
-				"Length"			: self.filterLength,
-				#"FetchError"		:"",
-				#"RxRequest"			:"",
-				"RxResponse"		: self.filterRequest,
-				"RxStatus"			: self.filterRequest,
-				"RxURL"				: self.filterRequest,
-				"RxProtocol"		: self.filterRequest,
-				"RxHeader"			: self.filterRequest,
-				"TxRequest"			: self.filterRequest,
-				#"TxResponse"		:"",
-				#"TxStatus"			:"",
-				"TxURL"				: self.filterRequest,
-				"TxProtocol"		: self.filterRequest,
-				"TxHeader"			: self.filterRequest,
-				#"ObjRequest"		:"",
-				#"ObjResponse"		:"",
-				#"ObjStatus"			:"",
-				#"ObjURL"			:"",
-				#"ObjProtocol"		:"",
-				#"ObjHeader"			:"",
-				#"LostHeader"		:"",
-				#"TTL"				:"",
-				#"Fetch_Body"		:"",
-				#"VCL_acl"			:"",
-				#"VCL_call"			:"",
-				#"VCL_trace"			:"",
-				#"VCL_return"		:"",
-				#"VCL_error"			:"",
-				#"ReqStart"			:"",
-				#"Hit"				:"",
-				#"HitPass"			:"",
-				#"ExpBan"			:"",
-				#"ExpKill"			:"",
-				#"WorkThread"		:"",
-				#"ESI_xmlerror"		:"",
-				#"Hash"				:"",
-				#"Backend_health"	:"",
-				#"VCL_Log"			:"",
-				#"Gzip"				:"",
-			},
-		}
-		self.vslutil = varnishapi.VSLUtil()
-		self.tags    = self.vslutil.tags
-		
+
 		
 	def runVSL(self):
 		self.attachVarnishAPI()
