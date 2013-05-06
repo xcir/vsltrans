@@ -31,7 +31,6 @@ def main():
 		vsl.runVSL()
 
 
-
 class VarnishLog:
 
 	tags      = 0
@@ -62,6 +61,28 @@ class VarnishLog:
 		'resp',
 		'storage',
 		]
+
+	#アクセスを分割するセパレータ
+	reqsep  = {
+		1 : {
+			'open' : {
+				'ReqStart'     : 'ReqStart',
+				},
+			'close' : {
+				'ReqEnd'       : 'ReqEnd',
+				},
+			},
+		2 : {
+			'open' : {
+				'BackendOpen'  : 'BackendOpen',
+				'BackendReuse' : 'BackendReuse',
+				},
+			'close' : {
+				'Length'       : 'Length',
+				#'BackendClose' : 'BackendClose',
+				},
+			},
+		}
 
 	def __init__(self):
 		#ファイル入力用の正規表現
@@ -417,27 +438,6 @@ class VarnishLog:
 			data[cmpo][prop].append({'key':'', 'lkey':'', 'val':msg})
 			
 	
-	#アクセスを分割するセパレータ
-	reqsep  = {
-		1 : {
-			'open' : {
-				'ReqStart'     : 'ReqStart',
-				},
-			'close' : {
-				'ReqEnd'       : 'ReqEnd',
-				},
-			},
-		2 : {
-			'open' : {
-				'BackendOpen'  : 'BackendOpen',
-				'BackendReuse' : 'BackendReuse',
-				},
-			'close' : {
-				'Length'       : 'Length',
-				#'BackendClose' : 'BackendClose',
-				},
-			},
-		}
 	
 	
 	#データ配列の作成
@@ -633,11 +633,11 @@ class VarnishLog:
 				max = length
 
 		for v in data:
-			self._sub_printAction_Box(v['function'])
-			self._sub_printAction_Line(v,max)
+			self._sub_printActionBox(v['function'])
+			self._sub_printActionLine(v,max)
 		print
 		
-	def _sub_printAction_Line(self , data, max):
+	def _sub_printActionLine(self , data, max):
 		item = data['item']
 		ret  = data['return']
 		print '      |'
@@ -650,7 +650,7 @@ class VarnishLog:
 		print '      | return' + pad + ' | ' + ret
 		print '      |'
 
-	def _sub_printAction_Box(self,txt):
+	def _sub_printActionBox(self,txt):
 		df  = 13 - len(txt)
 		spa = ' ' * (df // 2)
 		spb = ' ' * ((df // 2) + (df % 2))
