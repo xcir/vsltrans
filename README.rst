@@ -48,8 +48,8 @@ Other option
 ::
 
   matches regex(can multiple specify)
-    python vsltrans.py -m "rxheader:Cookie locale"
-    python vsltrans.py -m "rxheader:Cookie locale" -m "rxurl:^/images"
+    python vsltrans.py -m "rxheader:Cookie: locale"
+    python vsltrans.py -m "rxheader:Cookie: locale" -m "rxurl:^/images"
   
 
 Original log
