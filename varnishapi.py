@@ -193,6 +193,16 @@ class VarnishAPI:
 		self.lib.VSL_NonBlocking(self.vd, 1)
 		self.lib.VSL_Dispatch(self.vd, cb_func, self.vd)
 
+	def VSL_Name2Tag(self, name):
+		return self.lib.VSL_Name2Tag(name, ctypes.c_int(-1))
+
+	def VSL_NameNormalize(self,name):
+		r = self.VSL_Name2Tag(name)
+		if r >= 0:
+			return self.VSL_tags[r]
+
+		return ''
+		
 	def normalizeDic(self, priv, tag, fd, length, spec, ptr, bm):
 	    #  353 ReqStart     c 182.249.241.92 15720 761591365
 		type = '-'

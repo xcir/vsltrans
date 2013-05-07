@@ -25,6 +25,17 @@ def main():
 
 	if opt.has_key('-libvapi'):
 		vsl.libvap = opt['-libvapi'][0]
+
+	#VarnishAPIに接続
+	vsl.attachVarnishAPI()
+
+	if opt.has_key('-m'):
+		for v in opt['-m']:
+			if not vsl.appendTagFilter(v):
+				return
+	#-imの対応をそのうち書く(ignore -m)
+
+
 	if opt.has_key('-f'):
 		vsl.runFILE(opt['-f'][0])
 	else:
@@ -41,7 +52,74 @@ class VarnishLog:
 	logfile   = ''
 	rfmt      = 0
 	libvap    = 'libvarnishapi.so.1'
+	
+	tagfilter = {}
 
+	def filterTagFilter(self, type, fd):
+		cnt = len(self.tagfilter)
+		if cnt == 0:
+			return True
+		
+		base = self.obj[type][fd][-1]
+		cmp = []
+		#client
+		for raw in base['raw']:
+			tag = raw['tag']
+			msg = raw['msg']
+			if self.tagfilter.has_key(tag):
+				for tf in self.tagfilter[tag]:
+					execFlag = True
+					for chk in cmp:
+						if tf == chk:
+							execFlag = False
+							break
+					if execFlag and tf.search(msg):
+						cmp.append(tf)
+						cnt -= 1
+						if cnt == 0:
+							return True
+
+		#backend
+		for idx in range(base['curidx'] + 1):
+			if base['data'][idx]['backend'].has_key('raw'):
+				for raw in base['data'][idx]['backend']['raw']['raw']:
+					tag = raw['tag']
+					msg = raw['msg']
+					if self.tagfilter.has_key(tag):
+						for tf in self.tagfilter[tag]:
+							execFlag = True
+							for chk in cmp:
+								if tf == chk:
+									execFlag = False
+									break
+							if execFlag and tf.search(msg):
+								cmp.append(tf)
+								cnt -= 1
+								if cnt == 0:
+									return True
+		
+		return False
+
+	def appendTagFilter(self, data):
+		spl = data.split(':', 2)
+		if len(spl) == 1:
+			print '[ERROR] -m option format'
+			return False
+		tag = self.vap.VSL_NameNormalize(spl[0])
+		if tag == '':
+			print '[ERROR] -m option format'
+			return False
+		if not self.tagfilter.has_key(tag):
+			self.tagfilter[tag] = []
+		
+		try:
+			self.tagfilter[tag].append(re.compile(spl[1]))
+		except re.error:
+			print '[ERROR] -m regex format'
+			return False
+
+		return True
+	
 	#Trx毎に格納
 	obj = {
 		1 : {}, #client
@@ -86,7 +164,7 @@ class VarnishLog:
 
 	def __init__(self):
 		#ファイル入力用の正規表現
-		self.rfmt = re.compile('^([^ ]+) +([^ ]+) +([^ ]+) +(.*)$')
+		self.rfmt = re.compile('^ *([^ ]+) +([^ ]+) +([^ ]+) +(.*)$')
 		
 		self.filter     = {
 			0:{},
@@ -231,6 +309,8 @@ class VarnishLog:
 		spl                 = rawline['msg'].split(' ')
 		backendFd           = long(spl[0])
 		#data['raw']        = copy.deepcopy(self.obj[2][backendFd])
+		if (not self.obj[2].has_key(backendFd) or len(self.obj[2][backendFd]) == 0):
+			return
 		data['raw']         = self.obj[2][backendFd].pop(0)
 		
 		bcuridx             = data['raw']['curidx']
@@ -315,7 +395,7 @@ class VarnishLog:
 		item           = []
 		tracetmp       = ''
 		#traceとreturnを構築
-		if(len(spl) > 1):
+		if(len(spl) > 0):
 			for v in spl:
 				if v[0].isdigit():
 					#trace
@@ -329,7 +409,7 @@ class VarnishLog:
 						item.append({'key':'VCL_trace','val':tracetmp})
 				else:
 					ret = v
-		
+
 		curidx         = base['curidx']
 		
 		#ESI-check
@@ -498,6 +578,9 @@ class VarnishLog:
 		if not type == 1:
 			return
 		base           = self.obj[type][fd][-1]
+		
+		if not self.filterTagFilter(type,fd):
+			return
 		
 		#print var
 		#一旦テストで0を指定している（restartとかになると変わるので注意）
@@ -856,7 +939,7 @@ class VarnishLog:
 		 1284 RxHeader     b Content-Type: image/png
 
 		'''
-		m = self.rfmt.search(data.strip())
+		m = self.rfmt.search(data.rstrip("\r\n"))
 
 		if not m:
 			return
@@ -874,18 +957,16 @@ class VarnishLog:
 			r['type'] = 1
 		elif r['typeName'] == 'b':
 			r['type'] = 2
-		self.vslData.append(r)
+		return(r)
 
 		
 
 		
 	def runVSL(self):
-		self.attachVarnishAPI()
 		self.startThread(self.vapLoop)
 
 	def runFILE(self,file):
 		self.logfile = file
-		self.attachVarnishAPI()
 		self.startThread(self.fileLoop)
 		
 		

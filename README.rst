@@ -8,8 +8,8 @@ Re-format tool for vsl(varnishlog)
 -----------------------------------
 
 :Author: Shohei Tanaka(@xcir)
-:Date: 2013-05-05
-:Version: 0.0-alpha1
+:Date: 2013-05-08
+:Version: 0.0-alpha2
 :Manual section: 1
 
 ATTENTION
@@ -42,6 +42,15 @@ Read from logfile
   normal
     python vsltrans.py -f test.log
 
+
+Other option
+***********************************************
+::
+
+  matches regex(can multiple specify)
+    python vsltrans.py -m "rxheader:Cookie locale"
+    python vsltrans.py -m "rxheader:Cookie locale" -m "rxurl:^/images"
+  
 
 Original log
 ---------------------------------------
