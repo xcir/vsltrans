@@ -184,14 +184,22 @@ class VarnishAPI:
 		self.lib.VSL_Open(self.vd, 1)
 
 
-	def VSL_Dispatch(self, func):
+	def VSL_Dispatch(self, func, priv = False):
 		cb_func = VSL_handler_f(func)
-		self.lib.VSL_Dispatch(self.vd, cb_func, self.vd)
+		if priv:
+			self.lib.VSL_Dispatch(self.vd, cb_func, priv)
+		else:
+			self.lib.VSL_Dispatch(self.vd, cb_func, self.vd)
+		
 
-	def VSL_NonBlockingDispatch(self, func):
+	def VSL_NonBlockingDispatch(self, func, priv = False):
 		cb_func = VSL_handler_f(func)
 		self.lib.VSL_NonBlocking(self.vd, 1)
-		self.lib.VSL_Dispatch(self.vd, cb_func, self.vd)
+		if priv:
+			self.lib.VSL_Dispatch(self.vd, cb_func, priv)
+		else:
+			self.lib.VSL_Dispatch(self.vd, cb_func, self.vd)
+		
 
 	def VSL_Name2Tag(self, name):
 		return self.lib.VSL_Name2Tag(name, ctypes.c_int(-1))
@@ -204,7 +212,6 @@ class VarnishAPI:
 		return ''
 		
 	def normalizeDic(self, priv, tag, fd, length, spec, ptr, bm):
-	    #  353 ReqStart     c 182.249.241.92 15720 761591365
 		type = '-'
 		if spec == 1:
 			type = 'c'
