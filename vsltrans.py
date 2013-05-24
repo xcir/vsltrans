@@ -1,7 +1,7 @@
 # coding: utf-8
 import varnishapi
 
-import threading,time,signal,copy,sys,re,os
+import threading,time,signal,copy,sys,re,os,time
 
 
 
@@ -204,7 +204,7 @@ class VarnishLog:
 				"ObjProtocol"		: self.filterRequest,
 				"ObjHeader"			: self.filterRequest,
 				#"LostHeader"		:"",
-				#"TTL"				:"",
+				"TTL"				: [self.filterTTL, self.filterActItem],
 				#"Fetch_Body"		:"",
 				#"VCL_acl"			:"",
 				"VCL_call"			: self.filterAction,
@@ -213,7 +213,7 @@ class VarnishLog:
 				#"VCL_error"			:"",
 				"ReqStart"			: self.filterReqStart,
 				#"Hit"				:"",
-				#"HitPass"			:"",
+				"HitPass"			: [self.filterHitPass, self.filterActItem],
 				#"ExpBan"			:"",
 				#"ExpKill"			:"",
 				#"WorkThread"		:"",
@@ -297,6 +297,27 @@ class VarnishLog:
 				else:
 					self.filter[type][tag](base,v)
 
+	#フィルタ情報を格納
+	def filterTTL(self, base, rawline):
+		'''
+		                       0       1    2     3    4     5      6    7    8      9
+		                      xid      src  ttl grace keep basetime age date expire max-age
+		  538 TTL          c 2480419881 VCL 864000 -1 -1 1367990868 -0
+		  663 TTL          c 2480419886 RFC 3600 -1 -1 1367990868 0 1367990868 1367990968 3600
+		'''
+		spl = rawline['msg'].split(' ')
+		spl[5] = time.strftime("%Y-%m-%d %H:%M:%S +0000" ,time.gmtime(float(spl[5])))
+		var_dump(spl)
+		if spl[1] == 'RFC':
+			if int(spl[8]) >0:
+				spl[8] = time.strftime("%Y-%m-%d %H:%M:%S +0000" ,time.gmtime(float(spl[8])))
+			if int(spl[7]) >0 :
+				spl[7] = time.strftime("%Y-%m-%d %H:%M:%S +0000" ,time.gmtime(float(spl[7])))
+			rawline['aliasmsg'] = "[RefTime]=%s [src]=RFC [ttl]=%s [grace]=%s [keep]=%s [Age]=%s [Date]=%s [Expires]=%s [Max-Age]=%s" % (spl[5], spl[2], spl[3], spl[4], spl[6], spl[7], spl[8], spl[9])
+		else:
+			rawline['aliasmsg'] = "[RefTime]=%s [src]=VCL [ttl]=%s [grace]=%s [keep]=%s [Age]=%s" %  ( spl[5], spl[2], spl[3], spl[4], spl[6])
+		
+		
 	#バックエンド情報の格納
 	def filterBackend(self, base, rawline):
 		curidx          = base['curidx']
@@ -496,6 +517,9 @@ class VarnishLog:
 		data   = base['data'][curidx]['hash']['hash']
 		data.append(rawline['msg'])
 
+	def filterHitPass(self, base, rawline):
+		base['info']['hitpass']    += 1
+
 	#req.urlなどを格納
 	def filterRequest(self, base, rawline):
 		curidx = base['curidx']
@@ -544,7 +568,7 @@ class VarnishLog:
 		base           = self.obj[type][fd][-1]
 		raw            = base['raw']
 		base['curidx'] = -1
-		base['info']   = {'esi':0,'restart':0,'backend':[]}
+		base['info']   = {'hitpass':0,'esi':0,'restart':0,'backend':[]}
 		base['time']   = {}
 		#base['curactidx'] = -1
 
@@ -633,6 +657,7 @@ class VarnishLog:
 		print 'Response size   | ' + str(reqdata['length']) + ' byte'
 		print 'Response Status | ' + respvar['proto'][0]['val'] +' '+ respvar['status'][0]['val'] +' ' + respvar['response'][0]['val']
 		print 'Total time      | ' + str(round(timeinfo['total'],5)) + ' sec'
+		print 'HitPass count   | ' + str(info['hitpass'])
 		print 'Restart count   | ' + str(info['restart'])
 		print 'ESI count       | ' + str(info['esi'])
 		print 'Backend count   | ' + str(len(info['backend']))
