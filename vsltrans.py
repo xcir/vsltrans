@@ -307,7 +307,6 @@ class VarnishLog:
 		'''
 		spl = rawline['msg'].split(' ')
 		spl[5] = time.strftime("%Y-%m-%d %H:%M:%S +0000" ,time.gmtime(float(spl[5])))
-		var_dump(spl)
 		if spl[1] == 'RFC':
 			if int(spl[8]) >0:
 				spl[8] = time.strftime("%Y-%m-%d %H:%M:%S +0000" ,time.gmtime(float(spl[8])))
