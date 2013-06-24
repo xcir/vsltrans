@@ -171,7 +171,7 @@ class VarnishLog:
 			#Client
 			1:{
 				#"Debug"				:"",
-				#"Error"				:"",
+				"Error"				: self.filterError,
 				#"CLI"				:"",
 				#"StatSess"			:"",
 				"ReqEnd"			: self.filterReqEnd,
@@ -226,7 +226,7 @@ class VarnishLog:
 			#Backend
 			2:{
 				#"Debug"				:"",
-				#"Error"				:"",
+				"Error"				: self.filterError,
 				#"CLI"				:"",
 				#"StatSess"			:"",
 				#"ReqEnd"			:"",
@@ -637,7 +637,13 @@ class VarnishLog:
 	def printGeneralInfo(self,base):
 		data     = base['data']
 		reqdata  = data[0]
-		respvar  = data[0]['var']['resp']
+
+		#junkセッション対応
+		if data[0]['var'].has_key('resp'):
+			respvar  = data[0]['var']['resp']
+		else:
+			respvar  = False
+			
 		client   = base['client']
 		info     = base['info']
 		timeinfo = base['time']
@@ -648,13 +654,13 @@ class VarnishLog:
 					host = v['val']
 					break
 
-		#self.printLine('#')
 		print 'General Info.'
 		self.printLine()
 		print 'Client ip:port  | ' +client['ip'] + ':' + client['port']
 		print 'Request host    | ' + host
 		print 'Response size   | ' + str(reqdata['length']) + ' byte'
-		print 'Response Status | ' + respvar['proto'][0]['val'] +' '+ respvar['status'][0]['val'] +' ' + respvar['response'][0]['val']
+		if respvar:
+			print 'Response Status | ' + respvar['proto'][0]['val'] +' '+ respvar['status'][0]['val'] +' ' + respvar['response'][0]['val']
 		print 'Total time      | ' + str(round(timeinfo['total'],5)) + ' sec'
 		print 'HitPass count   | ' + str(info['hitpass'])
 		print 'Restart count   | ' + str(info['restart'])

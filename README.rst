@@ -8,14 +8,9 @@ Re-format tool for vsl(varnishlog)
 -----------------------------------
 
 :Author: Shohei Tanaka(@xcir)
-:Date: 2013-05-08
-:Version: 0.0-alpha2
+:Date: 2013-06-24
+:Version: 0.1
 :Manual section: 1
-
-ATTENTION
-===========
-This version is alpha quality.
-work in progress now.
 
 
 DESCRIPTION
