@@ -24,15 +24,15 @@ class VarnishLog:
 
     tagfilter = {}
 
-    # Trx毎に格納
+    # Stored in each Trx
     obj = {
         1: {},  # client
         2: {},  # backend
     }
-    # パース前のデータ保存領域
+    # Data storage area of XXX before
     vslData = []
 
-    # 出力順
+    # Output order
     prnVarOrder = [
         'client',
         'server',
@@ -44,7 +44,7 @@ class VarnishLog:
         'storage',
     ]
 
-    # アクセスを分割するセパレータ
+    # Separator to divide access
     reqsep = {
         1: {
             'open': {
@@ -67,7 +67,7 @@ class VarnishLog:
     }
 
     def __init__(self):
-        # ファイル入力用の正規表現
+        # Regex for input file
         self.rfmt = re.compile('^ *([^ ]+) +([^ ]+) +([^ ]+) +(.*)$')
 
         self.filter = {
@@ -254,8 +254,8 @@ class VarnishLog:
 
         return True
 
-    # フィルタのループ
     def loop_filter(self, base):
+        """ TODO """
         raw = base['raw']
         for v in raw:
             type = v['type']
@@ -267,9 +267,8 @@ class VarnishLog:
                 else:
                     self.filter[type][tag](base, v)
 
-    # フィルタ情報を格納
     def filter_ttl(self, base, rawline):
-        """
+        """ Stores information filter
                                0       1    2     3    4     5      6    7    8      9
                               xid      src  ttl grace keep basetime age date expire max-age
           538 TTL          c 2480419881 VCL 864000 -1 -1 1367990868 -0
@@ -295,12 +294,11 @@ class VarnishLog:
                 "[grace]=%s [keep]=%s [Age]=%s" % (spl[5], spl[2], spl[3],
                                                    spl[4], spl[6])
 
-    # バックエンド情報の格納
     def filter_backend(self, base, rawline):
+        """ Store backend information """
         curidx = base['curidx']
         data = base['data'][curidx]['backend']
         cvar = base['data'][curidx]['var']
-
         #'msg': '14 default default',
         #         fd name    verbose
         spl = rawline['msg'].split(' ')
@@ -324,20 +322,20 @@ class VarnishLog:
         for k, v in bvar.items():
             cvar[k] = v
 
-    # lengthを取得
     def filter_length(self, base, rawline):
+        """ Get length """
         curidx = base['curidx']
         base['data'][curidx]['length'] = int(rawline['msg'])
 
-    # traceを解釈
     def filter_trace(self, base, rawline):
+        """ Interpret trace information """
         spl = rawline['msg'].split(' ')
         spl2 = spl[1].split('.')
         rawline['aliasmsg'] = '(VRT_Count:%s line:%s pos:%s)' \
             % (spl[0], spl2[0], spl2[1])
 
-    # error系を格納
     def filter_error(self, base, rawline):
+        """ Store information about errors ? """
         curidx = base['curidx']
         data = base['data'][curidx]['error']
 
@@ -352,8 +350,8 @@ class VarnishLog:
            'typeName': 'c'},
         '''
 
-    # Action内のアイテムを格納
     def filter_act_item(self, base, rawline):
+        """ The store items of Action in ??? """
         curidx = base['curidx']
         curactidx = base['data'][curidx]['curactidx']
 
@@ -363,8 +361,8 @@ class VarnishLog:
         else:
             data.append({'key': rawline['tag'], 'val': rawline['msg']})
 
-    # 実行時間を取得
     def filter_req_end(self, base, rawline):
+        """ Get execution time """
         spl = rawline['msg'].split(' ')
         curidx = base['curidx']
         base['data'][curidx]['time'] = {}
@@ -375,20 +373,18 @@ class VarnishLog:
         data['execute'] = float(spl[4])
         data['exit'] = float(spl[5])
 
-    # アクションを構築
     def filter_action(self, base, rawline):
-
+        """ Build action
         # 12 VCL_call     c fetch 3 41.9 23 103.5 24 109.17
         #   12 VCL_call     c pass 17 81.5 pass
-        #
-
+        """
         spl = rawline['msg'].split(' ')
         msg = spl.pop(0)
         ret = ''
         item = []
         tracetmp = ''
-        # traceとreturnを構築
-        if(len(spl) > 0):
+        # Build and return trace
+        if len(spl) > 0:
             for v in spl:
                 if v[0].isdigit():
                     # trace
@@ -404,20 +400,16 @@ class VarnishLog:
                     ret = v
 
         curidx = base['curidx']
-
         # ESI-check
         if msg == 'recv' and base['data'][curidx]['curactidx'] > 0:
-
             self.incr_data(base, 'esi')
             curidx = base['curidx']
 
         data = base['data'][curidx]['act']
-
         if rawline['tag'] == 'VCL_return':
             curactidx = base['data'][curidx]['curactidx']
             data[curactidx]['return'] = msg
-
-            # restartとESIの場合はIncrする
+            # I will incr in the case of ESI and restart
             if msg == 'restart':
                 self.incr_data(base, 'restart')
 
@@ -425,11 +417,12 @@ class VarnishLog:
             base['data'][curidx]['curactidx'] += 1
             data.append({'function': msg, 'return': ret, 'item': item})
 
-    # クライアント情報取得
     def filter_req_start(self, base, rawline):
+        """ Acquisition of client information
         #                    client.ip   port     xid
         #          'msg': '192.168.1.199 47475 1642652384',
         # WSP(sp, SLT_ReqStart, "%s %s %u", sp->addr, sp->port,  sp->xid);
+        """
         curidx = base['curidx']
         if 'req' not in base['data'][curidx]['var']:
             base['data'][curidx]['var']['req'] = {}
@@ -445,8 +438,8 @@ class VarnishLog:
             'val': spl[2],
         }]
 
-    # restart,ESIの情報を構築
     def con_restart_esi(self, base):
+        """ Build information about restart, ESI ? """
         restart = 0
         esi = 0
         #length  = []
@@ -463,8 +456,8 @@ class VarnishLog:
         base['info']['esi'] = esi
         #base['info']['extraLength'] = length
 
-    # varyの情報を構築
     def con_vary(self, base):
+        """ Build information about vary """
         for trx in base['data']:
             var = trx['var']
             if 'obj' in var and 'http' in var['obj']:
@@ -483,18 +476,19 @@ class VarnishLog:
                                 if val == '':
                                     trx['hash']['vary'].append(
                                         {'key': tgkey, 'val': ''})
-    # ハッシュ情報を格納
 
     def filter_hash(self, base, rawline):
+        """ Store hash information """
         curidx = base['curidx']
         data = base['data'][curidx]['hash']['hash']
         data.append(rawline['msg'])
 
     def filter_hit_pass(self, base, rawline):
+        """ Increase hitpass """
         base['info']['hitpass'] += 1
 
-    # req.urlなどを格納
     def filter_request(self, base, rawline):
+        """ Store req.url """
         curidx = base['curidx']
         data = base['data'][curidx]['var']
         msg = rawline['msg']
@@ -514,8 +508,8 @@ class VarnishLog:
         else:
             data[cmpo][prop].append({'key': '', 'lkey': '', 'val': msg})
 
-    # データ配列の作成
     def incr_data(self, base, info=''):
+        """ Create data array """
         if 'data' not in base:
             base['data'] = []
         base['data'].append({
@@ -531,8 +525,8 @@ class VarnishLog:
         })
         base['curidx'] += 1
 
-    # トランザクションデータをコミット
     def commit_trx(self, type, fd):
+        """ Commit transaction data """
         # if type == 2:
         #   return
         base = self.obj[type][fd][-1]
@@ -549,25 +543,18 @@ class VarnishLog:
 
         self.incr_data(base)
 
-        #######################
-        # ここから詳細データ作成
-
-        # タグ名を付与
+        # More data creation from here on
+        # Grant the tag name ?
         self.append_tag_name(raw)
-
-        # フィルタ実行
+        # Run the filter
         self.loop_filter(base)
-
-        # Vary情報の取得
+        # Acquisition of vary information
         self.con_vary(base)
-
-        # restart/ESI情報の作成
+        # Create/get restart/ESI information ?
         self.con_restart_esi(base)
-
-        #######################
         # for client
         if type == 1:
-            # client/server.ip付与
+            # grant client/server.ip
             self.set_var_client_server(base)
 
     def print_trx(self, type, fd):
@@ -579,27 +566,22 @@ class VarnishLog:
         if not self.filter_tag_filter(type, fd):
             return
 
-        # print var
-        # 一旦テストで0を指定している（restartとかになると変わるので注意）
+        # (Note that it is change when it comes to such as restart) you have
+        # specified a 0 in the test once
         idx = 0
-
         self.print_line('<')
         print 'START transaction.'
         self.print_line('<')
-        # 全体のInfoを出力
+        # Output of entire info
         self.print_general_info(base)
         for idx in range(base['curidx'] + 1):
-
-            # 個別のInfoを出力
+            # Outputs individual info
             self.print_info(base, idx)
-
-            # エラーを表示
+            # Print error information
             self.print_error(base, idx)
-
-            # アクションを表示
+            # Print action
             self.print_action(base, idx)
-
-            # 変数情報を表示
+            # Print variable information
             self.print_variable(base, idx)
 
         self.print_line('>')
@@ -610,8 +592,7 @@ class VarnishLog:
     def print_general_info(self, base):
         data = base['data']
         reqdata = data[0]
-
-        # junkセッション対応
+        # junk corresponding(related to?) session
         if 'resp' in data[0]['var']:
             respvar = data[0]['var']['resp']
         else:
@@ -635,6 +616,7 @@ class VarnishLog:
         if respvar:
             print "Response Status | %s %s %s" % (respvar['proto'][0]['val'],
                     respvar['status'][0]['val'], respvar['response'][0]['val'])
+
         print "Total time      | %s sec" % (round(timeinfo['total'], 5))
         print "HitPass count   | %s" % (info['hitpass'])
         print "Restart count   | %s" % (info['restart'])
@@ -652,11 +634,9 @@ class VarnishLog:
             return
 
         max = self.chk_max_length(data, 'key')
-
         self.print_line('#')
         print 'Error infomation.'
         self.print_line()
-
         for v in data:
             pad = ' ' * (max - len(v['key']))
             print "%s%s | %s" % (v['key'], pad, v['val'])
@@ -667,13 +647,10 @@ class VarnishLog:
     def print_info(self, base, idx):
         data = base['data'][idx]
         hashdata = data['hash']
-
         ret = ''
-
         self.print_line('#')
         print 'Object infomation.'
         self.print_line()
-
         # type
         if not data['info'] == '':
             print "Type        | %s" % (data['info'])
@@ -681,8 +658,8 @@ class VarnishLog:
         #hash and vary
         for hash in hashdata['hash']:
             ret += '"' + hash + '" + '
-        print "Hash        | %s" % (ret.rstrip('+ '))
 
+        print "Hash        | %s" % (ret.rstrip('+ '))
         if len(hashdata['vary']) > 0:
             maxlen = self.chk_max_length(
                 hashdata['vary'], 'key') + len('req.http.')
@@ -694,23 +671,17 @@ class VarnishLog:
 
         # length
         print "Object size | %s" % (data['length'])
-
         # backend
         print "Backend     | %s" % (data['backendname'])
-
         self.print_line()
         print
 
     def print_action(self, base, idx):
         data = base['data'][idx]['act']
-
         max = 6  # return
-
         self.print_line('#')
         print 'Action infomation.'
-
         self.print_line()
-
         for v in data:
             length = self.chk_max_length(v['item'], 'key')
             if max < length:
@@ -719,6 +690,7 @@ class VarnishLog:
         for v in data:
             self._sub_print_action_box(v['function'])
             self._sub_print_action_line(v, max)
+
         print
 
     def _sub_print_action_line(self, data, max):
@@ -729,6 +701,7 @@ class VarnishLog:
             for v in item:
                 pad = ' ' * (max - len(v['key']))
                 print '      | ' + v['key'] + pad + ' | ' + v['val']
+
         pad = ' ' * (max - 6)
         print '      | ' + max * ' ' + ' |'
         print '      | return' + pad + ' | ' + ret
@@ -738,7 +711,6 @@ class VarnishLog:
         df = 13 - len(txt)
         spa = ' ' * (df // 2)
         spb = ' ' * ((df // 2) + (df % 2))
-
         print "+-------------+"
         print "|%s%s%s|" % (spa, txt, spb)
         print "+-------------+"
@@ -746,16 +718,13 @@ class VarnishLog:
     def print_variable(self, base, idx):
         data = base['data'][idx]['var']
         prn = []
-
         for key in self.prnVarOrder:
             self._sub_print_variable(data, key, prn)
 
         if len(prn) > 0:
             maxLen = self.chk_max_length(prn, 'key')
             maxLenVal = self.chk_max_length(prn, 'val')
-
             lineLen = (maxLen + maxLenVal + len(' | '))
-
             self.print_line('#')
             print 'Variable infomation.'
             self.print_line('-', lineLen)
@@ -764,11 +733,13 @@ class VarnishLog:
                     self.print_line('-', lineLen)
                 else:
                     self.print_pad(v['key'], v['val'], maxLen)
+
             print
 
     def _sub_print_variable(self, data, key, prn):
         if key not in data:
             return prn
+
         obj = data[key].items()
         for cat, v in obj:
             for vv in v:
@@ -776,6 +747,7 @@ class VarnishLog:
                     'key': (key + '.' + cat + '.' + vv['key']).strip('.'),
                     'val': vv['val']
                 })
+
         prn.append(0)
         return prn
 
@@ -794,15 +766,18 @@ class VarnishLog:
                     length = len(v[key])
                     if maxLen < length:
                         maxLen = length
+
         else:
             for k, v in data.items():
                 length = len(k)
                 if maxLen < length:
                     maxLen = length
+
         return maxLen
 
-    # client.*とserver.*を設定（serverはデータ元がないので・・・）
     def set_var_client_server(self, base):
+        """ Set Server.* and Client.*, because there is no data source server
+        """
         data = base['data']
         for var in data:
             var['client'] = {
@@ -813,16 +788,16 @@ class VarnishLog:
                 }]
             }
 
-    # タグの名称追加
     def append_tag_name(self, raw):
+        """ Append name of tag """
         for v in raw:
             v['tagname'] = self.tags[v['type']][v['tag']]
 
-    # トランザクションごとのデータ作成
     def con_trx(self, r):
+        """ Creating data per transaction """
         if not r:
             return
-        # 値を作成
+        # create value
         type = r['type']
         if type == 0:
             return
@@ -830,39 +805,39 @@ class VarnishLog:
         tag = r['tag']
         fd = r['fd']
         if fd in self.obj[type]:
-            # 開いてる
+            # fd is open ?
             if tag in self.reqsep[type]['close']:
-                # 閉じる(Print対象）
+                # close(print target)
                 self.obj[type][fd][-1]['raw'].append(r)
 
                 self.commit_trx(type, fd)
                 self.print_trx(type, fd)
                 if type == 1:
-                    # データ削除(Clientの場合のみ)
+                    # delete data(only if Client ...???)
                     del self.obj[type][fd]
             elif tag in self.reqsep[type]['open']:
                 if type == 1:  # client
-                    # 開く（バックエンドか何かしらのバグ）
+                    # to open(bug or some kind of back-end)
                     del self.obj[type][fd]
                     self.obj[type][fd] = [{'raw': []}]
                     self.obj[type][fd][-1]['raw'].append(r)
                 elif type == 2:  # Backend
-                    # 開く（バックエンドか何かしらのバグ）
-                    # ESI対応で使われたかのチェックを行う
+                    # to open(bug or some kind of back-end)
+                    # I do check if it was used in corresponding ESI
                     #del self.obj[type][fd]
                     self.obj[type][fd].append({'raw': []})
                     self.obj[type][fd][-1]['raw'].append(r)
 
             else:
-                # 通常格納
+                # normally stored
                 self.obj[type][fd][-1]['raw'].append(r)
         elif tag in self.reqsep[type]['open']:
-            # 開く
+            # I open ???
             self.obj[type][fd] = [{'raw': []}]
             self.obj[type][fd][-1]['raw'].append(r)
 
-    # スレッド周りの処理
     def sighandler(self, event, signr, handler):
+        """ Process signal/signal to stop """
         event.set()
 
     def vapLoop(self, event):
@@ -906,15 +881,14 @@ class VarnishLog:
         e = threading.Event()
         signal.signal(signal.SIGINT, (lambda a, b: self.sighandler(e, a, b)))
 
-        # スレッド作成
+        # Create Thread
         # if self.vap:
         threads.append(threading.Thread(target=inloop, args=(e,)))
         threads[-1].start()
 
         threads.append(threading.Thread(target=self.print_loop, args=(e,)))
         threads[-1].start()
-
-        # 終了待ち
+        # Wait for thread to join
         for th in threads:
             while th.isAlive():
                 time.sleep(0.5)
@@ -967,41 +941,40 @@ class VarnishLog:
 
 
 def dump(obj):
-    '''return a printable representation of an object for debugging'''
+    """ return a printable representation of an object for debugging """
     newobj = obj
     if isinstance(obj, list):
-        # リストの中身を表示できる形式にする
+        # Display/format contents of the list
         newobj = []
         for item in obj:
             newobj.append(dump(item))
 
     elif isinstance(obj, tuple):
-        # タプルの中身を表示できる形式にする
+        # Display/format contents of the tuple
         temp = []
         for item in obj:
             temp.append(dump(item))
 
         newobj = tuple(temp)
     elif isinstance(obj, set):
-        # セットの中身を表示できる形式にする
+        # Display/format contents of the set
         temp = []
         for item in obj:
-            # itemがclassの場合はdump()は辞書を返すが,辞書はsetで使用できないので文字列にする
+            # Return dump of a dictionary if item is a class
             temp.append(str(dump(item)))
 
         newobj = set(temp)
     elif isinstance(obj, dict):
-        # 辞書の中身（キー、値）を表示できる形式にする
+        # Display/format contents of dict as k, v
         newobj = {}
         for key, value in obj.items():
-            # keyがclassの場合はdump()はdictを返すが,dictはキーになれないので文字列にする
             newobj[str(dump(key))] = dump(value)
 
     elif isinstance(obj, types.FunctionType):
-        # 関数を表示できる形式にする
+        # Display/format function
         newobj = repr(obj)
     elif '__dict__' in dir(obj):
-        # 新しい形式のクラス class Hoge(object)のインスタンスは__dict__を持っている
+        # No idea
         newobj = obj.__dict__.copy()
         if ' object at ' in str(obj) and not '__type__' in newobj:
             newobj['__type__'] = str(obj).replace(" object at ",
@@ -1031,13 +1004,13 @@ def main():
         vsl.libvap = opt['-libvapi'][0]
 
     # VarnishAPIに接続
+    # Connect to Varnish API
     vsl.attach_varnish_API()
 
     if '-m' in opt:
         for v in opt['-m']:
             if not vsl.append_tag_filter(v):
                 return
-    #-imの対応をそのうち書く(ignore -m)
 
     if '-f' in opt:
         vsl.run_file(opt['-f'][0])
