@@ -29,7 +29,7 @@ class VarnishLog:
         1: {},  # client
         2: {},  # backend
     }
-    # Data storage area of XXX before
+    # Data storage area of ... before
     vslData = []
 
     # Output order
@@ -255,7 +255,7 @@ class VarnishLog:
         return True
 
     def loop_filter(self, base):
-        """ TODO """
+        """ ... """
         raw = base['raw']
         for v in raw:
             type = v['type']
