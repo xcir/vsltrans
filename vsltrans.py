@@ -178,7 +178,7 @@ class VarnishLog:
                 #"WorkThread"       :"",
                 #"ESI_xmlerror"     :"",
                 #"Hash"             :"",
-                #"Backend_health"   :"",
+                "Backend_health": self.filter_health
                 #"VCL_Log"          :"",
                 #"Gzip"             :"",
             },
@@ -437,6 +437,12 @@ class VarnishLog:
             'lkey': '',
             'val': spl[2],
         }]
+
+    def filter_health(self, base, rawline):
+        """
+        0 Backend_health - recommender02 Still healthy 4--X-RH 5 3 5 0.003418 0.003802 HTTP/1.1 200 OK
+        """
+        pass
 
     def con_restart_esi(self, base):
         """ Build information about restart, ESI ? """
@@ -752,9 +758,11 @@ class VarnishLog:
         return prn
 
     def print_line(self, char='-', length=70):
+        """ Function to print delimiters """
         print char * length
 
     def print_pad(self, k, v, maxLen, dlm=" | "):
+        """ Print padded string ? """
         fmt = "%- " + str(maxLen) + "s" + dlm + "%s"
         print fmt % (k, v)
 
@@ -797,6 +805,7 @@ class VarnishLog:
         """ Creating data per transaction """
         if not r:
             return
+
         # create value
         type = r['type']
         if type == 0:
@@ -909,6 +918,7 @@ class VarnishLog:
          'type': 0L,
          'typeName': '-'}
         データを読み込む場合
+        If you want to read the data
          1284 RxHeader     b Content-Type: image/png
 
         """
