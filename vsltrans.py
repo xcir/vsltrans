@@ -309,6 +309,13 @@ class VarnishLog:
             return
 
         data['raw'] = self.obj[2][backendFd].pop(0)
+        if 'curidx' not in data['raw'].keys():
+            # {'raw': [
+            #   {'msg': 'cms02', 'type': 2L, 'tag': 'BackendReuse', 'fd': 25L, 'typeName': 'b'},
+            #   {'msg': 'cms02', 'type': 2L, 'tag': 'BackendClose', 'fd': 25L, 'typeName': 'b'}
+            # ]}
+            return
+
         bcuridx = data['raw']['curidx']
         bvar = data['raw']['data'][bcuridx]['var']
         data['name'] = spl[1]
