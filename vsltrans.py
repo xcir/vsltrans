@@ -903,7 +903,7 @@ class VarnishLog:
             print
 
     def run_VSL(self):
-        self.start_thread(self.vapLoop)
+        self.start_thread(self.vap_loop)
 
     def run_file(self, file):
         self.logfile = file
@@ -948,7 +948,7 @@ class VarnishLog:
         self.vslData.append(self.vap.normalize_dic(priv, tag, fd, length, spec,
                                                   ptr, bm))
 
-    def vapLoop(self, event):
+    def vap_loop(self, event):
         while not event.isSet():
             self.vap.VSL_NonBlockingDispatch(self.vap_callback)
             time.sleep(0.1)
