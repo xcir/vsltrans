@@ -11,6 +11,7 @@ import varnishapi
 from pprint import pprint
 
 class VarnishLog:
+    """ VarnishLog parser and interpreter """
 
     tags = 0
     vap = 0
@@ -186,6 +187,7 @@ class VarnishLog:
         self.tags = self.vslutil.tags
 
     def _sub_print_action_box(self, txt):
+        """ Print-out action box """
         df = 13 - len(txt)
         spa = ' ' * (df // 2)
         spb = ' ' * ((df // 2) + (df % 2))
@@ -193,21 +195,23 @@ class VarnishLog:
         print "|%s%s%s|" % (spa, txt, spb)
         print "+-------------+"
 
-    def _sub_print_action_line(self, data, max):
+    def _sub_print_action_line(self, data, max_len):
+        """ Print-out action vertical line """
         item = data['item']
         ret = data['return']
         print '      |'
         if len(item) > 0:
             for v in item:
-                pad = ' ' * (max - len(v['key']))
+                pad = ' ' * (max_len - len(v['key']))
                 print '      | ' + v['key'] + pad + ' | ' + v['val']
 
-        pad = ' ' * (max - 6)
-        print '      | ' + max * ' ' + ' |'
+        pad = ' ' * (max_len - 6)
+        print '      | ' + max_len * ' ' + ' |'
         print '      | return' + pad + ' | ' + ret
         print '      |'
 
     def _sub_print_variable(self, data, key, prn):
+        """ Print-out k:v variable(s) """
         if key not in data:
             return prn
 
@@ -249,31 +253,32 @@ class VarnishLog:
         for v in raw:
             v['tagname'] = self.tags[v['type']][v['tag']]
 
-    def attach_varnish_API(self):
+    def attach_varnish_api(self):
+        """ Attach to VarnishAPI """
         self.vap = varnishapi.VarnishAPI(self.libvap)
 
     def chk_max_length(self, data, key=''):
-        maxLen = 0
+        max_len = 0
         if isinstance(data, list):
             for v in data:
                 if isinstance(v, dict) and key in v:
                     length = len(v[key])
-                    if maxLen < length:
-                        maxLen = length
+                    if max_len < length:
+                        max_len = length
 
         else:
             for k, v in data.items():
                 length = len(k)
-                if maxLen < length:
-                    maxLen = length
+                if max_len < length:
+                    max_len = length
 
-        return maxLen
+        return max_len
 
-    def commit_trx(self, type, fd):
+    def commit_trx(self, obj_type, fd):
         """ Commit transaction data """
-        # if type == 2:
+        # if obj_type == 2:
         #   return
-        base = self.obj[type][fd][-1]
+        base = self.obj[obj_type][fd][-1]
         raw = base['raw']
         base['curidx'] = -1
         base['info'] = {
@@ -297,7 +302,7 @@ class VarnishLog:
         # Create/get restart/ESI information ?
         self.con_restart_esi(base)
         # for client
-        if type == 1:
+        if obj_type == 1:
             # grant client/server.ip
             self.set_var_client_server(base)
 
@@ -325,43 +330,43 @@ class VarnishLog:
             return
 
         # create value
-        type = r['type']
-        if type == 0:
+        trx_type = r['type']
+        if trx_type == 0:
             return
 
         tag = r['tag']
         fd = r['fd']
-        if fd in self.obj[type]:
+        if fd in self.obj[trx_type]:
             # fd is open ?
-            if tag in self.reqsep[type]['close']:
+            if tag in self.reqsep[trx_type]['close']:
                 # close(print target)
-                self.obj[type][fd][-1]['raw'].append(r)
+                self.obj[trx_type][fd][-1]['raw'].append(r)
 
-                self.commit_trx(type, fd)
-                self.print_trx(type, fd)
-                if type == 1:
+                self.commit_trx(trx_type, fd)
+                self.print_trx(trx_type, fd)
+                if trx_type == 1:
                     # delete data(only if Client ...???)
-                    del self.obj[type][fd]
-            elif tag in self.reqsep[type]['open']:
-                if type == 1:  # client
+                    del self.obj[trx_type][fd]
+            elif tag in self.reqsep[trx_type]['open']:
+                if trx_type == 1:  # client
                     # to open(bug or some kind of back-end)
-                    del self.obj[type][fd]
-                    self.obj[type][fd] = [{'raw': []}]
-                    self.obj[type][fd][-1]['raw'].append(r)
-                elif type == 2:  # Backend
+                    del self.obj[trx_type][fd]
+                    self.obj[trx_type][fd] = [{'raw': []}]
+                    self.obj[trx_type][fd][-1]['raw'].append(r)
+                elif trx_type == 2:  # Backend
                     # to open(bug or some kind of back-end)
                     # I do check if it was used in corresponding ESI
-                    #del self.obj[type][fd]
-                    self.obj[type][fd].append({'raw': []})
-                    self.obj[type][fd][-1]['raw'].append(r)
+                    #del self.obj[trx_type][fd]
+                    self.obj[trx_type][fd].append({'raw': []})
+                    self.obj[trx_type][fd][-1]['raw'].append(r)
 
             else:
                 # normally stored
-                self.obj[type][fd][-1]['raw'].append(r)
-        elif tag in self.reqsep[type]['open']:
+                self.obj[trx_type][fd][-1]['raw'].append(r)
+        elif tag in self.reqsep[trx_type]['open']:
             # I open ???
-            self.obj[type][fd] = [{'raw': []}]
-            self.obj[type][fd][-1]['raw'].append(r)
+            self.obj[trx_type][fd] = [{'raw': []}]
+            self.obj[trx_type][fd][-1]['raw'].append(r)
 
     def con_vary(self, base):
         """ Build information about vary """
@@ -385,6 +390,7 @@ class VarnishLog:
                                         {'key': tgkey, 'val': ''})
 
     def file_loop(self, event):
+        """ Read lines from file specified by self.logfile """
         if not os.path.exists(self.logfile):
             self.endthread = True
             return
@@ -459,13 +465,13 @@ class VarnishLog:
         #'msg': '14 default default',
         #         fd name    verbose
         spl = rawline['msg'].split(' ')
-        backendFd = long(spl[0])
-        #data['raw']        = copy.deepcopy(self.obj[2][backendFd])
-        if (backendFd not in self.obj[2]
-                or len(self.obj[2][backendFd]) == 0):
+        backend_fd = long(spl[0])
+        #data['raw']        = copy.deepcopy(self.obj[2][backend_fd])
+        if (backend_fd not in self.obj[2]
+                or len(self.obj[2][backend_fd]) == 0):
             return
 
-        data['raw'] = self.obj[2][backendFd].pop(0)
+        data['raw'] = self.obj[2][backend_fd].pop(0)
         if 'curidx' not in data['raw'].keys():
             # {'raw': [
             #   {'msg': 'cms02', 'type': 2L, 'tag': 'BackendReuse', 'fd': 25L, 'typeName': 'b'},
@@ -577,13 +583,13 @@ class VarnishLog:
         else:
             data[cmpo][prop].append({'key': '', 'lkey': '', 'val': msg})
 
-    def filter_tag_filter(self, type, fd):
+    def filter_tag_filter(self, obj_type, fd):
         cnt = len(self.tagfilter)
         if cnt == 0:
             return True
 
-        base = self.obj[type][fd][-1]
-        cmp = []
+        base = self.obj[obj_type][fd][-1]
+        cmp_list = []
         # client
         for raw in base['raw']:
             tag = raw['tag']
@@ -591,13 +597,13 @@ class VarnishLog:
             if tag in self.tagfilter:
                 for tf in self.tagfilter[tag]:
                     exec_flag = True
-                    for chk in cmp:
+                    for chk in cmp_list:
                         if tf == chk:
                             exec_flag = False
                             break
 
                     if exec_flag and tf.search(msg):
-                        cmp.append(tf)
+                        cmp_list.append(tf)
                         cnt -= 1
                         if cnt == 0:
                             return True
@@ -611,12 +617,12 @@ class VarnishLog:
                     if tag in self.tagfilter:
                         for tf in self.tagfilter[tag]:
                             exec_flag = True
-                            for chk in cmp:
+                            for chk in cmp_list:
                                 if tf == chk:
                                     exec_flag = False
                                     break
                             if exec_flag and tf.search(msg):
-                                cmp.append(tf)
+                                cmp_list.append(tf)
                                 cnt -= 1
                                 if cnt == 0:
                                     return True
@@ -678,14 +684,14 @@ class VarnishLog:
         """ ... """
         raw = base['raw']
         for v in raw:
-            type = v['type']
+            var_type = v['type']
             tag = v['tag']
-            if tag in self.filter[type]:
-                if isinstance(self.filter[type][tag], list):
-                    for func in self.filter[type][tag]:
+            if tag in self.filter[var_type]:
+                if isinstance(self.filter[var_type][tag], list):
+                    for func in self.filter[var_type][tag]:
                         func(base, v)
                 else:
-                    self.filter[type][tag](base, v)
+                    self.filter[var_type][tag](base, v)
 
     def parse_file(self, data):
         """
@@ -720,39 +726,42 @@ class VarnishLog:
         return(r)
 
     def print_action(self, base, idx):
+        """ Print-out actions Varnish has done/taken. """
         data = base['data'][idx]['act']
-        max = 6  # return
+        max_len = 6  # return
         self.print_line('#')
         print 'Action infomation.'
         self.print_line()
         for v in data:
             length = self.chk_max_length(v['item'], 'key')
-            if max < length:
-                max = length
+            if max_len < length:
+                max_len = length
 
         for v in data:
             self._sub_print_action_box(v['function'])
-            self._sub_print_action_line(v, max)
+            self._sub_print_action_line(v, max_len)
 
         print
 
     def print_error(self, base, idx):
+        """ Print-out errors during transaction(?) """
         data = base['data'][idx]['error']
         if len(data) == 0:
             return
 
-        max = self.chk_max_length(data, 'key')
+        max_len = self.chk_max_length(data, 'key')
         self.print_line('#')
         print 'Error infomation.'
         self.print_line()
         for v in data:
-            pad = ' ' * (max - len(v['key']))
+            pad = ' ' * (max_len - len(v['key']))
             print "%s%s | %s" % (v['key'], pad, v['val'])
 
         self.print_line()
         print
 
     def print_general_info(self, base):
+        """ Print-out general info about transaction """
         data = base['data']
         reqdata = data[0]
         # junk corresponding(related to?) session
@@ -792,6 +801,7 @@ class VarnishLog:
         print
 
     def print_info(self, base, idx):
+        """ Print-out object information """
         data = base['data'][idx]
         hashdata = data['hash']
         ret = ''
@@ -803,8 +813,8 @@ class VarnishLog:
             print "Type        | %s" % (data['info'])
 
         #hash and vary
-        for hash in hashdata['hash']:
-            ret += '"' + hash + '" + '
+        for hitem in hashdata['hash']:
+            ret += '"' + hitem + '" + '
 
         print "Hash        | %s" % (ret.rstrip('+ '))
         if len(hashdata['vary']) > 0:
@@ -828,6 +838,7 @@ class VarnishLog:
         print char * length
 
     def print_loop(self, event):
+        """ Infinite print-out loop """
         while not event.isSet():
             if len(self.vslData) == 0:
                 if self.endthread:
@@ -844,17 +855,17 @@ class VarnishLog:
             if self.endthread:
                 break
 
-    def print_pad(self, k, v, maxLen, dlm=" | "):
+    def print_pad(self, k, v, max_len, dlm=" | "):
         """ Print padded string ? """
-        fmt = "%- " + str(maxLen) + "s" + dlm + "%s"
+        fmt = "%- " + str(max_len) + "s" + dlm + "%s"
         print fmt % (k, v)
 
-    def print_trx(self, type, fd):
-        if not type == 1:
+    def print_trx(self, trx_type, fd):
+        if not trx_type == 1:
             return
 
-        base = self.obj[type][fd][-1]
-        if not self.filter_tag_filter(type, fd):
+        base = self.obj[trx_type][fd][-1]
+        if not self.filter_tag_filter(trx_type, fd):
             return
 
         # (Note that it is change when it comes to such as restart) you have
@@ -882,31 +893,34 @@ class VarnishLog:
         print
 
     def print_variable(self, base, idx):
+        """ Print-out variable information, resp. HTTP req and rsp """
         data = base['data'][idx]['var']
         prn = []
         for key in self.prnVarOrder:
             self._sub_print_variable(data, key, prn)
 
         if len(prn) > 0:
-            maxLen = self.chk_max_length(prn, 'key')
-            maxLenVal = self.chk_max_length(prn, 'val')
-            lineLen = (maxLen + maxLenVal + len(' | '))
+            max_len = self.chk_max_length(prn, 'key')
+            max_len_val = self.chk_max_length(prn, 'val')
+            line_len = (max_len + max_len_val + len(' | '))
             self.print_line('#')
             print 'Variable infomation.'
-            self.print_line('-', lineLen)
+            self.print_line('-', line_len)
             for v in prn:
                 if v == 0:
-                    self.print_line('-', lineLen)
+                    self.print_line('-', line_len)
                 else:
-                    self.print_pad(v['key'], v['val'], maxLen)
+                    self.print_pad(v['key'], v['val'], max_len)
 
             print
 
-    def run_VSL(self):
+    def run_vsl(self):
+        """ Run VSL """
         self.start_thread(self.vap_loop)
 
-    def run_file(self, file):
-        self.logfile = file
+    def run_file(self, file_name):
+        """ Run VSL from file """
+        self.logfile = file_name
         self.start_thread(self.file_loop)
 
     def set_var_client_server(self, base):
@@ -927,6 +941,7 @@ class VarnishLog:
         event.set()
 
     def start_thread(self, inloop):
+        """ Start VSL thread """
         threads = []
         e = threading.Event()
         signal.signal(signal.SIGINT, (lambda a, b: self.sighandler(e, a, b)))
@@ -1003,6 +1018,7 @@ def dump(obj):
 
 # ref:http://tomoemon.hateblo.jp/entry/20090921/p1
 def main():
+    """ Main - parse args, fire up VSL """
     argv = sys.argv
     vsl = VarnishLog()
     opt = {}
@@ -1021,7 +1037,7 @@ def main():
 
     # VarnishAPIに接続
     # Connect to Varnish API
-    vsl.attach_varnish_API()
+    vsl.attach_varnish_api()
 
     if '-m' in opt:
         for v in opt['-m']:
@@ -1031,9 +1047,10 @@ def main():
     if '-f' in opt:
         vsl.run_file(opt['-f'][0])
     else:
-        vsl.run_VSL()
+        vsl.run_vsl()
 
 def var_dump(obj):
+    """ Dump given object """
     pprint(dump(obj))
 
 if __name__ == '__main__':
