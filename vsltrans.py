@@ -535,7 +535,7 @@ class VarnishLog:
 			data[cmpo][prop] = []
 
 		if prop == 'http':
-			spl = msg.split(':')
+			spl = msg.split(':', 1)
 			data[cmpo][prop].append({'key':spl[0], 'lkey':spl[0].lower(), 'val':spl[1].lstrip()})
 		else:
 			data[cmpo][prop].append({'key':'', 'lkey':'', 'val':msg})
