@@ -8,8 +8,8 @@ Re-format tool for vsl(varnishlog)
 -----------------------------------
 
 :Author: Shohei Tanaka(@xcir)
-:Date: 2013-06-24
-:Version: 0.1
+:Date: 2014-05-24
+:Version: 0.2
 :Manual section: 1
 
 
@@ -680,3 +680,9 @@ Re-formatted log(python vsltrans.py -f test.log)
   END transaction.
   >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
+HISTORY
+===========
+
+Version 0.2: Fix parsing of HTTP header. Reopen VSM ,if Varnish restarted. (issue #2,3,4 thanks zstyblik)
+
+Version 0.1: First version
