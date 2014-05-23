@@ -52,6 +52,7 @@ class VarnishLog:
 	logfile   = ''
 	rfmt      = 0
 	libvap    = 'libvarnishapi.so.1'
+	last      = 0
 	
 	tagfilter = {}
 
@@ -119,13 +120,17 @@ class VarnishLog:
 			return False
 
 		return True
-	
-	#Trx毎に格納
-	obj = {
-		1 : {}, #client
-		2 : {}, #backend
-	}
-	#パース前のデータ保存領域
+
+	def initData(self):
+		self.obj = {
+			1 : {}, #client
+			2 : {}, #backend
+		}
+		self.vslData = []
+
+	#Trx毎に格納(initDataで初期化)
+	obj = {}
+	#パース前のデータ保存領域(initDataで初期化)
 	vslData = []
 
 	#出力順
@@ -166,6 +171,8 @@ class VarnishLog:
 		#ファイル入力用の正規表現
 		self.rfmt = re.compile('^ *([^ ]+) +([^ ]+) +([^ ]+) +(.*)$')
 		
+		#途中での初期化もありうるデータの初期化
+		self.initData()
 		self.filter     = {
 			0:{},
 			#Client
@@ -895,9 +902,16 @@ class VarnishLog:
 		event.set()
 		
 	def vapLoop(self,event):
+		self.last = int(time.time())
 		while not event.isSet():
 			self.vap.VSL_NonBlockingDispatch(self.vapCallBack)
 			time.sleep(0.1)
+			#Check VSM
+			if int(time.time()) - self.last > 5:
+				#データの初期化
+				self.initData()
+				self.vap.VSM_ReOpen()
+				self.last = int(time.time())
 		self.endthread = True
 
 
@@ -953,9 +967,10 @@ class VarnishLog:
 
 		
 	def attachVarnishAPI(self):
-		self.vap = varnishapi.VarnishAPI(self.libvap)
+		self.vap = varnishapi.VarnishAPI('', self.libvap)
 
 	def vapCallBack(self,priv, tag, fd, length, spec, ptr, bm):
+		self.last = int(time.time())
 		self.vslData.append(self.vap.normalizeDic(priv, tag, fd, length, spec, ptr, bm))
 
 	def parseFile(self, data):
