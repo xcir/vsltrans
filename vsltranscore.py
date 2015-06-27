@@ -374,11 +374,14 @@ class vslTrans:
 		#val
 		prnDone = {}
 		print self.printBox('','*','Variable',0,60)
+
+		print self.printBox('','#','Start',1),
 		self.flushSess(self.getRootVXID(vxid),1,'var',prnDone)
 		#event
 		print "\n"
 		prnDone = {}
 		print self.printBox('','*','Event',0,60)
+		print self.printBox('','#','Start',1),
 		self.flushSess(self.getRootVXID(vxid),1,'event',prnDone)
 		print '-'*100
 		print "\n"
