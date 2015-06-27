@@ -424,7 +424,7 @@ class vslTrans:
 		vd['timestamp'].append({'k':spl[0],'abs':spl2[1],'offset':spl2[3]})
 		spl3 = vd['timestamp'][-1]['abs'].split('.',2)
 		
-		val = time.strftime('%Y/%m/%d %H:%M:%S.', time.localtime(int(spl3[0]))) + spl3[1] + ' (last +' + vd['timestamp'][-1]['offset']+'s)'
+		val = spl[0] + ': '+time.strftime('%Y/%m/%d %H:%M:%S.', time.localtime(int(spl3[0]))) + spl3[1] + ' (last +' + vd['timestamp'][-1]['offset']+'s)'
 		self.appendEvent(vxid,ttag,val)
 		return 1
 	
