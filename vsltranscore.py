@@ -285,6 +285,9 @@ class vslTrans:
 					if spl[2] == 'restart':
 						ret = ret + self.printBox(prefix,'#',"RESTART")
 						ret = ret + self.flushAct(lvxid, '' ,lv,mode,prnDone)
+					if spl[2] == 'esi':
+						ret = ret + self.printBox(prefix+sp+' '*max + " > ",'#',"ESI")
+						ret = ret + self.flushAct(lvxid, prefix+sp+' '*max + " > " ,lv+1,mode,prnDone)
 					else:
 						ret = ret + self.flushAct(lvxid, prefix+sp+' '*max + " > " ,lv+1,mode,prnDone)
 				elif v['k'] == 'call':
@@ -292,7 +295,7 @@ class vslTrans:
 				elif v['k'] == 'return':
 					if   mode == 'var':
 						ret = ret + self.printVar(vdi,prefix + sp)
-					ret = ret + self.printBox(prefix,'<',"vcl_%s" % "return(%s)" % (v['v'].lower()))
+					ret = ret + self.printBox(prefix,'<',"return(%s)" % (v['v'].lower()))
 					ret = ret + prefix + sp + "\n"
 		return ret
 			
