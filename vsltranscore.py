@@ -323,11 +323,11 @@ class vslTrans:
 
 		return ret
 			
-	def printBox(self,prefix,wrd,txt,rmode=0):
-		ret = prefix + wrd*60+"\n"
-		ret = ret + prefix + wrd + self.printCenter(58,txt)+wrd+"\n"
+	def printBox(self,prefix,wrd,txt,rmode=0,sz=40):
+		ret = prefix + wrd*sz+"\n"
+		ret = ret + prefix + wrd + self.printCenter(sz-2,txt)+wrd+"\n"
 		if not rmode:
-			ret = ret + prefix + wrd*60+"\n"
+			ret = ret + prefix + wrd*sz+"\n"
 		return ret
 	def flushAct(self,vxid,prefix,lv,mode,prnDone):
 		ret = self.printBox(prefix,'#',"VXID:%d" % vxid)
@@ -358,10 +358,12 @@ class vslTrans:
 	def flush(self,vxid):
 		#val
 		prnDone = {}
+		print self.printBox('','*','Variable',0,60)
 		self.flushSess(self.getRootVXID(vxid),1,'var',prnDone)
 		#event
 		print "\n"
 		prnDone = {}
+		print self.printBox('','*','Event',0,60)
 		self.flushSess(self.getRootVXID(vxid),1,'event',prnDone)
 		print '-'*100
 		print "\n"
