@@ -61,11 +61,14 @@ ESIの時のreq.*が親のfini変数に交じるのでなんとかする
               ...
               tmp:{...}# uncommitted data.
           }
+          timestamp:[
+            {'k':'Process','abs':1435412407.697665,'offset':0.000042}
+          ]
       },
   }
 
 
-self.vxid[vxid] = {'actidx':[], 'act':{},'actcur':'initial','actnxt':None,'actstat':'init'}
+self.vxid[vxid] = {'actidx':[], 'act':{},'actcur':'initial','actnxt':None,'actstat':'init','timestamp':[]}
 actcur = 現在のアクション
 actnxt = 次のアクション(vcl_callで変更）
 actstat= 初期状態なのかwork状態なのか
@@ -139,6 +142,7 @@ class vslTrans:
 			'VCL_call':		[self.fExistVXID, self.fVCLCall],
 			'VCL_return':	[self.fExistVXID, self.fVCLReturn],
 
+			'Timestamp':	[self.fExistVXID, self.fTimestamp],
 			'__default':	[self.fExistVXID, self.fEventStor],
 
 		}
@@ -292,7 +296,7 @@ class vslTrans:
 					ret = ret + self.printEvent(prefix,sp,max,'','')
 					if mode == 'event':
 						ret = ret + self.printEvent(prefix,sp,max,v['k'],v['v'])
-					spl = v['v'].split(' ', 3)
+					spl = v['v'].split(' ', 2)
 					lvxid = int(spl[1])
 					prnDone[lvxid]=lvxid
 					if spl[2] == 'restart':
@@ -329,6 +333,7 @@ class vslTrans:
 		if not rmode:
 			ret = ret + prefix + wrd*sz+"\n"
 		return ret
+	
 	def flushAct(self,vxid,prefix,lv,mode,prnDone):
 		ret = self.printBox(prefix,'#',"VXID:%d" % vxid)
 		#ret =  prefix + "<<VXID:%d>>\n" % vxid
@@ -355,6 +360,16 @@ class vslTrans:
 			del self.sess[vxid]
 			del self.vxid[vxid]
 	
+	def printVal(self,k,v):
+		print "%30s | %s" % (k,v)
+
+	def printCenter(self,num,str):
+		l  = len(str)
+		ll = (num - l)/2
+		rr = num - l - ll
+		
+		return (' '*ll + str + ' '*rr)
+		
 	def flush(self,vxid):
 		#val
 		prnDone = {}
@@ -368,20 +383,9 @@ class vslTrans:
 		print '-'*100
 		print "\n"
 		
+		
 		#flush
 		self.rmData(prnDone)
-		
-		
-	
-	def printVal(self,k,v):
-		print "%30s | %s" % (k,v)
-
-	def printCenter(self,num,str):
-		l  = len(str)
-		ll = (num - l)/2
-		rr = num - l - ll
-		
-		return (' '*ll + str + ' '*rr)
 	########################################################################
 	def fExistVXID(self, ttag, vxid, cbd):
 		if vxid in self.sess:
@@ -413,6 +417,17 @@ class vslTrans:
 		
 		
 	########################################################################
+	def fTimestamp(self, ttag, vxid, cbd):
+		vd = self.vxid[vxid]
+		spl  = cbd['data'].split(':',1);
+		spl2 = spl[1].split(' ',3)
+		vd['timestamp'].append({'k':spl[0],'abs':spl2[1],'offset':spl2[3]})
+		spl3 = vd['timestamp'][-1]['abs'].split('.',2)
+		
+		val = time.strftime('%Y/%m/%d %H:%M:%S.', time.localtime(int(spl3[0]))) + spl3[1] + ' (last +' + vd['timestamp'][-1]['offset']+'s)'
+		self.appendEvent(vxid,ttag,val)
+		return 1
+	
 	def fEnd(self, ttag, vxid, cbd):
 		#vxid flush
 		vd = self.vxid[vxid]
@@ -436,7 +451,7 @@ class vslTrans:
 			self.sess[vxid] = [None]
 		else:
 			self.sess[vxid] = [vxidp]
-		self.vxid[vxid] = {'actidx':[], 'act':{},'actcur':'initial','actstat':'init'}
+		self.vxid[vxid] = {'actidx':[], 'act':{},'actcur':'initial','actstat':'init','timestamp':[]}
 		self.vxid[vxid]['act']['temp']    = {'init':{'var':{},'event':[]},'work':{'var':{},'event':[]},'fini':{'var':{},'event':[]}}
 		return 1
 		
