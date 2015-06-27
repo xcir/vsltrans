@@ -6,6 +6,11 @@ import threading,time,signal,copy,sys,re,os,time
 '''
 ESIの時のreq.*が親のfini変数に交じるのでなんとかする
 	→ESIのときだけ特殊対応としてfini -> (child)initに変更するかな(reqのみ)
+	→やっぱ無理に捻じ曲げなくていいや(bereqでわかるし
+	
+	・変数操作がない場合はboxを書かなくてnone editぐらいの文言に変更
+	・returnの表記がくどいのでその辺をv30っぽくする
+	・-fでファイル読み込むようにする(-graw -gvxidぐらいはサポートしたい input -/mod/-> raw -/mod/-> cbd）
 '''
 
 '''
@@ -265,12 +270,15 @@ class vslTrans:
 		ret = ret + line + "\n"
 		return ret
 	
+	def printEvent(self,prefix,sp,max,k,v):
+		return prefix + sp + (("%"+str(max)+"s | %s") % (k,v)) + "\n"
+	
 	def flushActEvent(self,vdi,prefix,lv,mode,prnDone):
 		sk = ['init','work','fini']
 		ret = ''
 		sp  = ' '*3+'| '
 		
-		max = 3
+		max = 15
 		if mode == 'event':
 			for step in sk:
 				for v in vdi[step]['event']:
@@ -280,33 +288,46 @@ class vslTrans:
 		
 		for step in sk:
 			for v in vdi[step]['event']:
-				if mode == 'event':
-					ret = ret + prefix + sp + (("%"+str(max)+"s | %s") % (v['k'],v['v'])) + "\n"
 				if v['k'] == 'Link':
+					ret = ret + self.printEvent(prefix,sp,max,'','')
+					if mode == 'event':
+						ret = ret + self.printEvent(prefix,sp,max,v['k'],v['v'])
 					spl = v['v'].split(' ', 3)
 					lvxid = int(spl[1])
 					prnDone[lvxid]=lvxid
 					if spl[2] == 'restart':
-						ret = ret + self.printBox(prefix,'#',"RESTART")
+						ret = ret + self.printBox(prefix,'#',"RESTART",1)
 						ret = ret + self.flushAct(lvxid, '' ,lv,mode,prnDone)
 					if spl[2] == 'esi':
-						ret = ret + self.printBox(prefix+sp+' '*max + " > ",'#',"ESI")
+						ret = ret + self.printBox(prefix+sp+' '*max + " > ",'#',"ESI",1)
 						ret = ret + self.flushAct(lvxid, prefix+sp+' '*max + " > " ,lv+1,mode,prnDone)
 					else:
 						ret = ret + self.flushAct(lvxid, prefix+sp+' '*max + " > " ,lv+1,mode,prnDone)
 				elif v['k'] == 'call':
+					#if mode == 'event':
+					#	ret = ret + self.printEvent(prefix,sp,max,v['k'],v['v'])
+					ret = ret + prefix + sp + "\n"
 					ret = ret + self.printBox(prefix,'>',"vcl_%s" % (v['v'].lower()))
 				elif v['k'] == 'return':
 					if   mode == 'var':
+						ret = ret + prefix + sp + "\n"
 						ret = ret + self.printVar(vdi,prefix + sp)
-					ret = ret + self.printBox(prefix + ' '*3,'<',"return(%s)" % (v['v'].lower()))
-					ret = ret + prefix + sp + "\n"
+					else:
+						ret = ret + self.printEvent(prefix,sp,max,'','')
+						ret = ret + self.printEvent(prefix,sp,max,v['k'],v['v'])
+						ret = ret + prefix + sp + "\n"
+					#	ret = ret + self.printBox(prefix + ' '*3,'<',"return(%s)" % (v['v'].lower()))
+					#	ret = ret + prefix + sp + "\n"
+				elif mode == 'event':
+					ret = ret + self.printEvent(prefix,sp,max,v['k'],v['v'])
+
 		return ret
 			
-	def printBox(self,prefix,wrd,txt):
+	def printBox(self,prefix,wrd,txt,rmode=0):
 		ret = prefix + wrd*60+"\n"
 		ret = ret + prefix + wrd + self.printCenter(58,txt)+wrd+"\n"
-		ret = ret + prefix + wrd*60+"\n"
+		if not rmode:
+			ret = ret + prefix + wrd*60+"\n"
 		return ret
 	def flushAct(self,vxid,prefix,lv,mode,prnDone):
 		ret = self.printBox(prefix,'#',"VXID:%d" % vxid)
