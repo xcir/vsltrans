@@ -3,6 +3,10 @@ import varnishapi
 
 import threading,time,signal,copy,sys,re,os,time
 
+'''
+ESIの時のreq.*が親のfini変数に交じるのでなんとかする
+	→ESIのときだけ特殊対応としてfini -> (child)initに変更するかな(reqのみ)
+'''
 
 '''
 - [VXID-TREE]
@@ -295,7 +299,7 @@ class vslTrans:
 				elif v['k'] == 'return':
 					if   mode == 'var':
 						ret = ret + self.printVar(vdi,prefix + sp)
-					ret = ret + self.printBox(prefix,'<',"return(%s)" % (v['v'].lower()))
+					ret = ret + self.printBox(prefix + ' '*3,'<',"return(%s)" % (v['v'].lower()))
 					ret = ret + prefix + sp + "\n"
 		return ret
 			
