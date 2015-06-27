@@ -24,10 +24,15 @@ DESCRIPTION
 ===========
 Re-format tool for vsl(varnishlog)
 
+ATTENTION
+===========
+This version is under development.
+
+include some bugs.
+
 HOW TO USE
 ===========
 
-This version is under development.
 
 Original log
 ---------------------------------------
