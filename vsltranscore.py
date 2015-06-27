@@ -250,6 +250,8 @@ class vslTrans:
 		'''
 		ret = ''
 		rv = self.rebuildVar(vdi,4)
+		if len(rv['val']) ==0:
+			return ''
 		tmp =  '+-' +('-'* rv['keysz']) + '-+-'
 		sar = ['init','work','fini']
 		for step in sar:
