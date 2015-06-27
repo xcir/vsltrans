@@ -1,4 +1,5 @@
 #!/usr/bin/python
+
 import vsltranscore,getopt,os,sys,syslog,traceback
 #based on Jurgen Hermanns http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/66012
 
