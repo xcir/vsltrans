@@ -262,6 +262,11 @@ class vslTrans:
 		self.vap     = varnishapi.VarnishLog(vops)
 		self.vslutil = varnishapi.VSLUtil()
 		self.dataClear()
+		self.__transWrd = {
+			'init':'Before vcl funciton',
+			'work':'In vcl function',
+			'fini':'After vcl function',
+		}
 		self.__filter = {
 			'ReqURL':		[self.fExistVXID, self.fRequest],
 			'ReqStart':		[self.fExistVXID, self.fRequest],
@@ -414,7 +419,7 @@ class vslTrans:
 		
 		'''
 		ret = ''
-		rv = self.rebuildVar(vdi,4)
+		rv = self.rebuildVar(vdi,19)
 		if len(rv['val']) ==0:
 			return ''
 		tmp =  '+-' +('-'* rv['keysz']) + '-+-'
@@ -426,7 +431,8 @@ class vslTrans:
 		
 		tmp =  '| ' +("%" + str(rv['keysz']) + "s | ")  % 'key'
 		for step in sar:
-			tmp = tmp + self.printCenter(rv['size'][step],step) + " | "
+			wrd = self.__transWrd[step]
+			tmp = tmp + self.printCenter(rv['size'][step],wrd) + " | "
 			#tmp = tmp + ("%" + str(rv['size'][step]) + "s | ")  % step
 		ret = ret + prefix + tmp + "\n"
 		ret = ret + line + "\n"
