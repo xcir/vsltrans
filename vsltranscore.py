@@ -577,6 +577,8 @@ class vslTrans:
 		return 1
 		
 	def fVCLReturn(self, ttag, vxid, cbd):
+		if ttag == 'VCL_return':
+			ttag = 'return'
 		self.appendEvent(vxid,ttag,cbd['data'])
 
 		vd = self.vxid[vxid]
