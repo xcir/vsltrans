@@ -121,7 +121,26 @@ class log2vsl:
 		'''
 		#Debug  {'level': 1L, 'type': 'c', 'reason': 2, 'vxid_parent': 0, 'length': 12L, 'tag': 1L, 'vxid': 34485, 'data': 'RES_MODE 18\x00', 'isbin': 2L}
 	def parseSession(self):
-		pass
+		r  = re.compile(r"^[-0-9]+ +([^ ]+) +(.*)$")
+		rh = re.compile(r"^[\*0-9]+ +<< +([^ ]+) +>> +(\d+) *$")
+		vxid  = 0
+		pvxid = 0
+		for line in self.raw:
+			m = r.match(line)
+			if not m:
+				m = rh.match(line)
+				if not m:
+					continue
+				vxid = int(m.group(2))
+				continue
+			ttag = m.group(1)
+			data = m.group(2)
+			if ttag == 'Begin':
+				pvxid = int(data.split(' ',3)[1])
+			if vxid not in self.data:
+				self.data[vxid] = []
+			self.data[vxid].append({'ttag':ttag,'pvxid':pvxid,'cbd':{'level':1,'type':None,'reason':None,'vxid_parent':pvxid,'length':len(data),'tag':None,'vxid':vxid,'data':data,'isbin':0}})
+			
 	def parseRequest(self):
 		r  = re.compile(r"^[-0-9]+ +([^ ]+) +(.*)$")
 		rh = re.compile(r"^[\*0-9]+ +<< +([^ ]+) +>> +(\d+) *$")
