@@ -9,7 +9,7 @@ Re-format tool for vsl(varnishlog)
 
 :Author: Shohei Tanaka(@xcir)
 :Date: 2015-06-28
-:Version: alpha2-varnish40
+:Version: 0.3-varnish40
 :Support Varnish Version: 4.0.x
 :Manual section: 1
 
@@ -23,10 +23,6 @@ https://github.com/xcir/vsltrans/tree/varnish30
 DESCRIPTION
 ===========
 Re-format tool for vsl(varnishlog)
-
-ATTENTION
-===========
-This version is under development.
 
 HOW TO USE
 ===========
@@ -378,7 +374,6 @@ Original log
 
 Re-formatted log(./vsltrans.py)
 ---------------------------------------------------
-I'm thinking output format now...
 ::
 
   ************************************************************
@@ -951,6 +946,8 @@ I'm thinking output format now...
 HISTORY
 ===========
 
-Version 0.2: Fix parsing of HTTP header. Reopen VSM ,if Varnish restarted. (issue #2,3,4 thanks zstyblik)
+Version 0.3-varnish40: Support Varnish4.0.x
 
-Version 0.1: First version
+Version 0.2-varnish30: Fix parsing of HTTP header. Reopen VSM ,if Varnish restarted. (issue #2,3,4 thanks zstyblik)
+
+Version 0.1-varnish30: First version
