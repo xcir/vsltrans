@@ -577,7 +577,7 @@ class vslTrans:
 		return 1
 		
 	def fVCLReturn(self, ttag, vxid, cbd):
-		self.appendEvent(vxid,'return',cbd['data'])
+		self.appendEvent(vxid,ttag,cbd['data'])
 
 		vd = self.vxid[vxid]
 		vd['act'][vd['actcur']] = copy.deepcopy(vd['act']['temp'])
