@@ -82,7 +82,7 @@ actstat= 初期状態なのかwork状態なのか
 class log2vsl:
 	def __init__(self):
 		self.raw  = []
-		self.data = []
+		self.data = {}
 		self.parse = None
 
 	def chkFmt(self):
@@ -139,13 +139,14 @@ class log2vsl:
 			data = m.group(4)
 			if ttag == 'Begin':
 				pvxid = int(data.split(' ',3)[1])
-			#dataの末尾に空白入れてるのはnot isbinで-1:してる対策
-			self.data.append({'ttag':ttag,'vxid':vxid,'cbd':{'level':1,'type':type,'reason':None,'vxid_parent':pvxid,'length':len(data),'tag':None,'vxid':vxid,'data':data + ' ','isbin':0}})
-		print self.data
+			
+			if vxid not in self.data:
+				self.data[vxid] = []
+			self.data[vxid].append({'ttag':ttag,'pvxid':pvxid,'cbd':{'level':1,'type':type,'reason':None,'vxid_parent':pvxid,'length':len(data),'tag':None,'vxid':vxid,'data':data,'isbin':0}})
 	def read(self,file):
 		self.raw   = []
 		self.parse = None
-		self.data  = []
+		self.data  = {}
 		if not os.path.exists(file):
 			return 0
 		f = open(file)
@@ -233,6 +234,7 @@ class vslTrans:
 			'Link':			[self.fExistVXID, self.fLink],
 			'VCL_call':		[self.fExistVXID, self.fVCLCall],
 			'VCL_return':	[self.fExistVXID, self.fVCLReturn],
+			'SessClose':	[self.fExistVXID, self.fVCLReturn],
 
 			'Timestamp':	[self.fExistVXID, self.fTimestamp],
 			'__default':	[self.fExistVXID, self.fEventStor],
@@ -244,22 +246,24 @@ class vslTrans:
 		if self.source == 'vsl':
 			while 1:
 				#dispatch
-				self.state = 0
+				#self.state = 0
 				ret = self.vap.Dispatch(self.vapCallBack)
 				if 0 == ret:
 					time.sleep(0.1)
 		else:
-			pass
+			for v in self.file.data.values():
+				for data in v:
+					self.filter(data['ttag'],data['cbd'])
 				
 	def vapCallBack(self, vap, cbd, priv):
 		if not cbd['isbin']:
 			cbd['length'] = cbd['length'] -1;
 			cbd['data']   = cbd['data'][:-1]
 			
-		self.filter(cbd)
+		ttag = vap.VSL_tags[cbd['tag']]
+		self.filter(ttag,cbd)
 	
-	def filter(self,cbd):
-		ttag = self.vap.VSL_tags[cbd['tag']]
+	def filter(self,ttag,cbd):
 		
 		vxid = cbd['vxid']
 		key = ttag
@@ -582,7 +586,7 @@ class vslTrans:
 		vd['actcur']  = None
 		vd['actstat'] = 'init'
 		return 1
-		
+
 	def fRequest(self, ttag, vxid, cbd):
 		#{'level': 2L, 'type': 'c', 'reason': 2, 'vxid_parent': 1, 'length': 37L, 'tag': 27L, 'vxid': 2, 'data': 'X-Powered-By: PHP/5.3.10-1ubuntu3.13\x00', 'isbin': 0L}
 
