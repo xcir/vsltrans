@@ -9,6 +9,7 @@ ESIの時のreq.*が親のfini変数に交じるのでなんとかする
 	→やっぱ無理に捻じ曲げなくていいや(bereqでわかるし
 	
 	・-fでファイル読み込むようにする(-graw -gvxidぐらいはサポートしたい input -/mod/-> raw -/mod/-> cbd）
+	・強制的にflushするモードをつけるかどうか検討（個人的にはやめたいけどセッションぐらいはskipしてもいいかも
 '''
 
 '''
@@ -90,17 +91,21 @@ class log2vsl:
 		re_request = re.compile(r"^--")
 		re_raw     = re.compile(r"^ *\d+ [A-Z]")
 		
+		haslv = 0
 		for line in self.raw:
 			if  re_raw.match(line):
 				self.parse = self.parseRaw
 				return
 			elif '<<' in line:
-				if re_session.match(line):
+				if re_session.match(line) and haslv:
 					self.parse = self.parseSession
+					print "hog2"
 					return
-				elif re_request.match(line):
-					self.parse = self.parseRequest
-					return
+				if re_request.match(line):
+					haslv = 1
+		if haslv:
+			self.parse = self.parseRequest
+			return
 		self.parse = self.parseVXID
 		return
 		'''
@@ -121,7 +126,26 @@ class log2vsl:
 	def parseRequest(self):
 		pass
 	def parseVXID(self):
-		pass
+		r  = re.compile(r"^- +([^ ]+) +(.*)$")
+		rh = re.compile(r"^\* +<< +([^ ]+) +>> +(\d+) *$")
+		vxid  = 0
+		pvxid = 0
+		for line in self.raw:
+			m = r.match(line)
+			if not m:
+				m = rh.match(line)
+				if not m:
+					continue
+				vxid = int(m.group(2))
+				continue
+			ttag = m.group(1)
+			data = m.group(2)
+			if ttag == 'Begin':
+				pvxid = int(data.split(' ',3)[1])
+			if vxid not in self.data:
+				self.data[vxid] = []
+			self.data[vxid].append({'ttag':ttag,'pvxid':pvxid,'cbd':{'level':1,'type':None,'reason':None,'vxid_parent':pvxid,'length':len(data),'tag':None,'vxid':vxid,'data':data,'isbin':0}})
+			
 	def parseRaw(self):
 		#    100073 Timestamp      c Process: 1435425931.782784 1.000796 0.000036
 		r = re.compile(r"^ *(\d+) ([^ ]+) +([^ ]) (.*)$")
@@ -143,6 +167,7 @@ class log2vsl:
 			if vxid not in self.data:
 				self.data[vxid] = []
 			self.data[vxid].append({'ttag':ttag,'pvxid':pvxid,'cbd':{'level':1,'type':type,'reason':None,'vxid_parent':pvxid,'length':len(data),'tag':None,'vxid':vxid,'data':data,'isbin':0}})
+			
 	def read(self,file):
 		self.raw   = []
 		self.parse = None
@@ -577,6 +602,7 @@ class vslTrans:
 		return 1
 		
 	def fVCLReturn(self, ttag, vxid, cbd):
+		#わざわざ名前変えるか再検討(vcl_returnに戻す？VCL表記に合わす？）
 		if ttag == 'VCL_return':
 			ttag = 'return'
 		self.appendEvent(vxid,ttag,cbd['data'])
