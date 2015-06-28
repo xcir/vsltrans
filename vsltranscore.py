@@ -99,10 +99,9 @@ class log2vsl:
 			elif '<<' in line:
 				if re_session.match(line) and haslv:
 					self.parse = self.parseSession
-					print "hog2"
 					return
-				if re_request.match(line):
-					haslv = 1
+			elif re_request.match(line):
+				haslv = 1
 		if haslv:
 			self.parse = self.parseRequest
 			return
@@ -124,7 +123,30 @@ class log2vsl:
 	def parseSession(self):
 		pass
 	def parseRequest(self):
-		pass
+		r  = re.compile(r"^[-0-9]+ +([^ ]+) +(.*)$")
+		rh = re.compile(r"^[\*0-9]+ +<< +([^ ]+) +>> +(\d+) *$")
+		vxid  = 0
+		pvxid = 0
+		for line in self.raw:
+			m = r.match(line)
+			if not m:
+				m = rh.match(line)
+				if not m:
+					continue
+				vxid = int(m.group(2))
+				continue
+			ttag = m.group(1)
+			data = m.group(2)
+			if ttag == 'Begin':
+				spl = data.split(' ',3)
+				if spl[0]=='req' and spl[2]=='rxreq':
+					pvxid = 0
+				else:
+					pvxid = int(spl[1])
+			if vxid not in self.data:
+				self.data[vxid] = []
+			self.data[vxid].append({'ttag':ttag,'pvxid':pvxid,'cbd':{'level':1,'type':None,'reason':None,'vxid_parent':pvxid,'length':len(data),'tag':None,'vxid':vxid,'data':data,'isbin':0}})
+
 	def parseVXID(self):
 		r  = re.compile(r"^- +([^ ]+) +(.*)$")
 		rh = re.compile(r"^\* +<< +([^ ]+) +>> +(\d+) *$")
