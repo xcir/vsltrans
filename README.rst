@@ -28,8 +28,6 @@ ATTENTION
 ===========
 This version is under development.
 
-include some bugs.
-
 HOW TO USE
 ===========
 
@@ -382,20 +380,20 @@ I'm thinking output format now...
   >               vcl_recv               >
   >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
      | 
-     | +--------------------------+-------------------------+--------+------+
-     | |                      key |          init           |  work  | fini | 
-     | +--------------------------+-------------------------+--------+------+
-     | |                client.ip | '192.168.1.30 43853'    |        |      | 
-     | |          req.http.Accept | '*/*'                   |        |      | 
-     | |      req.http.Connection | 'Keep-Alive'            |        |      | 
-     | |            req.http.Host | '192.168.1.37:6081'     |        |      | 
-     | |      req.http.User-Agent | 'Wget/1.15 (linux-gnu)' |        |      | 
-     | | req.http.X-Forwarded-For | '192.168.1.30'          |        |      | 
-     | |        req.http.hogehoge |                         | 'mage' |      | 
-     | |               req.method | 'GET'                   |        |      | 
-     | |                req.proto | 'HTTP/1.1'              |        |      | 
-     | |                  req.url | '/esi.html'             |        |      | 
-     | +--------------------------+-------------------------+--------+------+
+     | +--------------------------+-------------------------+---------------------+---------------------+
+     | |                      key |   Before vcl funciton   |   In vcl function   | After vcl function  | 
+     | +--------------------------+-------------------------+---------------------+---------------------+
+     | |                client.ip | '192.168.1.30 43853'    |                     |                     | 
+     | |          req.http.Accept | '*/*'                   |                     |                     | 
+     | |      req.http.Connection | 'Keep-Alive'            |                     |                     | 
+     | |            req.http.Host | '192.168.1.37:6081'     |                     |                     | 
+     | |      req.http.User-Agent | 'Wget/1.15 (linux-gnu)' |                     |                     | 
+     | | req.http.X-Forwarded-For | '192.168.1.30'          |                     |                     | 
+     | |        req.http.hogehoge |                         | 'mage'              |                     | 
+     | |               req.method | 'GET'                   |                     |                     | 
+     | |                req.proto | 'HTTP/1.1'              |                     |                     | 
+     | |                  req.url | '/esi.html'             |                     |                     | 
+     | +--------------------------+-------------------------+---------------------+---------------------+
      | 
   >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   >               vcl_hash               >
@@ -415,90 +413,90 @@ I'm thinking output format now...
      |                 > >          vcl_backend_fetch           >
      |                 > >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
      |                 >    | 
-     |                 >    | +----------------------------+-------------------------+------+------+
-     |                 >    | |                        key |          init           | work | fini | 
-     |                 >    | +----------------------------+-------------------------+------+------+
-     |                 >    | |          bereq.http.Accept | '*/*'                   |      |      | 
-     |                 >    | |            bereq.http.Host | '192.168.1.37:6081'     |      |      | 
-     |                 >    | |      bereq.http.User-Agent | 'Wget/1.15 (linux-gnu)' |      |      | 
-     |                 >    | | bereq.http.X-Forwarded-For | '192.168.1.30'          |      |      | 
-     |                 >    | |       bereq.http.X-Varnish | '34479'                 |      |      | 
-     |                 >    | |        bereq.http.hogehoge | 'mage'                  |      |      | 
-     |                 >    | |               bereq.method | 'GET'                   |      |      | 
-     |                 >    | |                bereq.proto | 'HTTP/1.1'              |      |      | 
-     |                 >    | |                  bereq.url | '/esi.html'             |      |      | 
-     |                 >    | +----------------------------+-------------------------+------+------+
+     |                 >    | +----------------------------+-------------------------+---------------------+---------------------+
+     |                 >    | |                        key |   Before vcl funciton   |   In vcl function   | After vcl function  | 
+     |                 >    | +----------------------------+-------------------------+---------------------+---------------------+
+     |                 >    | |          bereq.http.Accept | '*/*'                   |                     |                     | 
+     |                 >    | |            bereq.http.Host | '192.168.1.37:6081'     |                     |                     | 
+     |                 >    | |      bereq.http.User-Agent | 'Wget/1.15 (linux-gnu)' |                     |                     | 
+     |                 >    | | bereq.http.X-Forwarded-For | '192.168.1.30'          |                     |                     | 
+     |                 >    | |       bereq.http.X-Varnish | '34479'                 |                     |                     | 
+     |                 >    | |        bereq.http.hogehoge | 'mage'                  |                     |                     | 
+     |                 >    | |               bereq.method | 'GET'                   |                     |                     | 
+     |                 >    | |                bereq.proto | 'HTTP/1.1'              |                     |                     | 
+     |                 >    | |                  bereq.url | '/esi.html'             |                     |                     | 
+     |                 >    | +----------------------------+-------------------------+---------------------+---------------------+
      |                 >    | 
      |                 > >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
      |                 > >         vcl_backend_response         >
      |                 > >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
      |                 >    | 
-     |                 >    | +----------------------------+---------------------------------+------+---------------------------------+
-     |                 >    | |                        key |              init               | work |              fini               | 
-     |                 >    | +----------------------------+---------------------------------+------+---------------------------------+
-     |                 >    | |  beresp.http.Accept-Ranges | 'bytes'                         |      |                                 | 
-     |                 >    | | beresp.http.Content-Length | '287'                           |      |                                 | 
-     |                 >    | |   beresp.http.Content-Type | 'text/html'                     |      |                                 | 
-     |                 >    | |           beresp.http.Date | 'Sat, 27 Jun 2015 17:26:06 GMT' |      |                                 | 
-     |                 >    | |           beresp.http.ETag | '"281399-11f-5197b7d0b403a"'    |      |                                 | 
-     |                 >    | |  beresp.http.Last-Modified | 'Sat, 27 Jun 2015 08:17:33 GMT' |      |                                 | 
-     |                 >    | |         beresp.http.Server | 'Apache/2.2.22 (Ubuntu)'        |      |                                 | 
-     |                 >    | |           beresp.http.Vary | 'Accept-Encoding'               |      |                                 | 
-     |                 >    | |          beresp.http.X-Pad | 'avoid browser bug'             |      |                                 | 
-     |                 >    | |               beresp.proto | 'HTTP/1.1'                      |      |                                 | 
-     |                 >    | |              beresp.reason | 'OK'                            |      |                                 | 
-     |                 >    | |              beresp.status | '200'                           |      |                                 | 
-     |                 >    | |     obj.http.Accept-Ranges |                                 |      | 'bytes'                         | 
-     |                 >    | |    obj.http.Content-Length |                                 |      | '287'                           | 
-     |                 >    | |      obj.http.Content-Type |                                 |      | 'text/html'                     | 
-     |                 >    | |              obj.http.Date |                                 |      | 'Sat, 27 Jun 2015 17:26:06 GMT' | 
-     |                 >    | |              obj.http.ETag |                                 |      | '"281399-11f-5197b7d0b403a"'    | 
-     |                 >    | |     obj.http.Last-Modified |                                 |      | 'Sat, 27 Jun 2015 08:17:33 GMT' | 
-     |                 >    | |            obj.http.Server |                                 |      | 'Apache/2.2.22 (Ubuntu)'        | 
-     |                 >    | |              obj.http.Vary |                                 |      | 'Accept-Encoding'               | 
-     |                 >    | |             obj.http.X-Pad |                                 |      | 'avoid browser bug'             | 
-     |                 >    | |                  obj.proto |                                 |      | 'HTTP/1.1'                      | 
-     |                 >    | |                 obj.reason |                                 |      | 'OK'                            | 
-     |                 >    | |                 obj.status |                                 |      | '200'                           | 
-     |                 >    | +----------------------------+---------------------------------+------+---------------------------------+
+     |                 >    | +----------------------------+---------------------------------+---------------------+---------------------------------+
+     |                 >    | |                        key |       Before vcl funciton       |   In vcl function   |       After vcl function        | 
+     |                 >    | +----------------------------+---------------------------------+---------------------+---------------------------------+
+     |                 >    | |  beresp.http.Accept-Ranges | 'bytes'                         |                     |                                 | 
+     |                 >    | | beresp.http.Content-Length | '287'                           |                     |                                 | 
+     |                 >    | |   beresp.http.Content-Type | 'text/html'                     |                     |                                 | 
+     |                 >    | |           beresp.http.Date | 'Sat, 27 Jun 2015 17:26:06 GMT' |                     |                                 | 
+     |                 >    | |           beresp.http.ETag | '"281399-11f-5197b7d0b403a"'    |                     |                                 | 
+     |                 >    | |  beresp.http.Last-Modified | 'Sat, 27 Jun 2015 08:17:33 GMT' |                     |                                 | 
+     |                 >    | |         beresp.http.Server | 'Apache/2.2.22 (Ubuntu)'        |                     |                                 | 
+     |                 >    | |           beresp.http.Vary | 'Accept-Encoding'               |                     |                                 | 
+     |                 >    | |          beresp.http.X-Pad | 'avoid browser bug'             |                     |                                 | 
+     |                 >    | |               beresp.proto | 'HTTP/1.1'                      |                     |                                 | 
+     |                 >    | |              beresp.reason | 'OK'                            |                     |                                 | 
+     |                 >    | |              beresp.status | '200'                           |                     |                                 | 
+     |                 >    | |     obj.http.Accept-Ranges |                                 |                     | 'bytes'                         | 
+     |                 >    | |    obj.http.Content-Length |                                 |                     | '287'                           | 
+     |                 >    | |      obj.http.Content-Type |                                 |                     | 'text/html'                     | 
+     |                 >    | |              obj.http.Date |                                 |                     | 'Sat, 27 Jun 2015 17:26:06 GMT' | 
+     |                 >    | |              obj.http.ETag |                                 |                     | '"281399-11f-5197b7d0b403a"'    | 
+     |                 >    | |     obj.http.Last-Modified |                                 |                     | 'Sat, 27 Jun 2015 08:17:33 GMT' | 
+     |                 >    | |            obj.http.Server |                                 |                     | 'Apache/2.2.22 (Ubuntu)'        | 
+     |                 >    | |              obj.http.Vary |                                 |                     | 'Accept-Encoding'               | 
+     |                 >    | |             obj.http.X-Pad |                                 |                     | 'avoid browser bug'             | 
+     |                 >    | |                  obj.proto |                                 |                     | 'HTTP/1.1'                      | 
+     |                 >    | |                 obj.reason |                                 |                     | 'OK'                            | 
+     |                 >    | |                 obj.status |                                 |                     | '200'                           | 
+     |                 >    | +----------------------------+---------------------------------+---------------------+---------------------------------+
      | 
   >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   >             vcl_deliver              >
   >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
      | 
-     | +-----------------------------+---------------------------------+-------------------+------------------------------------------------------+
-     | |                         key |              init               |       work        |                         fini                         | 
-     | +-----------------------------+---------------------------------+-------------------+------------------------------------------------------+
-     | |             req.http.Accept |                                 |                   | '*/*' -> '*/*'                                       | 
-     | |         req.http.Connection |                                 |                   | 'Keep-Alive' -> 'Keep-Alive'                         | 
-     | |               req.http.Host |                                 |                   | '192.168.1.37:6081' -> '192.168.1.37:6081'           | 
-     | |         req.http.User-Agent |                                 |                   | 'Wget/1.15 (linux-gnu)' -> 'Wget/1.15 (linux-gnu)'   | 
-     | |    req.http.X-Forwarded-For |                                 |                   | '192.168.1.30' -> '192.168.1.30'                     | 
-     | |               req.http.hoge |                                 | 'xxx'             | 'xxx' -> 'xxx'                                       | 
-     | |           req.http.hogehoge |                                 |                   | 'mage' -> 'mage'                                     | 
-     | |                  req.method |                                 |                   | 'GET' -> 'GET'                                       | 
-     | |                   req.proto |                                 |                   | 'HTTP/1.1' -> 'HTTP/1.1'                             | 
-     | |                     req.url |                                 |                   | '/slow.php' -> '/slow.php' -> '/x.html' -> '/x.html' | 
-     | |     resp.http.Accept-Ranges | 'bytes'                         |                   |                                                      | 
-     | |               resp.http.Age | '0'                             |                   |                                                      | 
-     | |        resp.http.Connection |                                 |                   | 'keep-alive'                                         | 
-     | |    resp.http.Content-Length | '287'                           |                   | [unset]                                              | 
-     | |      resp.http.Content-Type | 'text/html'                     |                   |                                                      | 
-     | |              resp.http.Date | 'Sat, 27 Jun 2015 17:26:06 GMT' |                   |                                                      | 
-     | |              resp.http.ETag | '"281399-11f-5197b7d0b403a"'    |                   | [unset] -> 'W/"281399-11f-5197b7d0b403a"'            | 
-     | |     resp.http.Last-Modified | 'Sat, 27 Jun 2015 08:17:33 GMT' |                   |                                                      | 
-     | |            resp.http.Server | 'Apache/2.2.22 (Ubuntu)'        |                   |                                                      | 
-     | | resp.http.Transfer-Encoding |                                 |                   | 'chunked'                                            | 
-     | |              resp.http.Vary | 'Accept-Encoding'               |                   |                                                      | 
-     | |               resp.http.Via | '1.1 varnish-v4'                |                   |                                                      | 
-     | |             resp.http.X-Pad | 'avoid browser bug'             |                   |                                                      | 
-     | |         resp.http.X-Varnish | '34478'                         |                   |                                                      | 
-     | |          resp.http.restarts |                                 | '0'               |                                                      | 
-     | |      resp.http.x-powered-by |                                 | 'hoge' -> [unset] |                                                      | 
-     | |                  resp.proto | 'HTTP/1.1'                      |                   |                                                      | 
-     | |                 resp.reason | 'OK'                            |                   |                                                      | 
-     | |                 resp.status | '200'                           |                   |                                                      | 
-     | +-----------------------------+---------------------------------+-------------------+------------------------------------------------------+
+     | +-----------------------------+---------------------------------+---------------------+------------------------------------------------------+
+     | |                         key |       Before vcl funciton       |   In vcl function   |                  After vcl function                  | 
+     | +-----------------------------+---------------------------------+---------------------+------------------------------------------------------+
+     | |             req.http.Accept |                                 |                     | '*/*' -> '*/*'                                       | 
+     | |         req.http.Connection |                                 |                     | 'Keep-Alive' -> 'Keep-Alive'                         | 
+     | |               req.http.Host |                                 |                     | '192.168.1.37:6081' -> '192.168.1.37:6081'           | 
+     | |         req.http.User-Agent |                                 |                     | 'Wget/1.15 (linux-gnu)' -> 'Wget/1.15 (linux-gnu)'   | 
+     | |    req.http.X-Forwarded-For |                                 |                     | '192.168.1.30' -> '192.168.1.30'                     | 
+     | |               req.http.hoge |                                 | 'xxx'               | 'xxx' -> 'xxx'                                       | 
+     | |           req.http.hogehoge |                                 |                     | 'mage' -> 'mage'                                     | 
+     | |                  req.method |                                 |                     | 'GET' -> 'GET'                                       | 
+     | |                   req.proto |                                 |                     | 'HTTP/1.1' -> 'HTTP/1.1'                             | 
+     | |                     req.url |                                 |                     | '/slow.php' -> '/slow.php' -> '/x.html' -> '/x.html' | 
+     | |     resp.http.Accept-Ranges | 'bytes'                         |                     |                                                      | 
+     | |               resp.http.Age | '0'                             |                     |                                                      | 
+     | |        resp.http.Connection |                                 |                     | 'keep-alive'                                         | 
+     | |    resp.http.Content-Length | '287'                           |                     | [unset]                                              | 
+     | |      resp.http.Content-Type | 'text/html'                     |                     |                                                      | 
+     | |              resp.http.Date | 'Sat, 27 Jun 2015 17:26:06 GMT' |                     |                                                      | 
+     | |              resp.http.ETag | '"281399-11f-5197b7d0b403a"'    |                     | [unset] -> 'W/"281399-11f-5197b7d0b403a"'            | 
+     | |     resp.http.Last-Modified | 'Sat, 27 Jun 2015 08:17:33 GMT' |                     |                                                      | 
+     | |            resp.http.Server | 'Apache/2.2.22 (Ubuntu)'        |                     |                                                      | 
+     | | resp.http.Transfer-Encoding |                                 |                     | 'chunked'                                            | 
+     | |              resp.http.Vary | 'Accept-Encoding'               |                     |                                                      | 
+     | |               resp.http.Via | '1.1 varnish-v4'                |                     |                                                      | 
+     | |             resp.http.X-Pad | 'avoid browser bug'             |                     |                                                      | 
+     | |         resp.http.X-Varnish | '34478'                         |                     |                                                      | 
+     | |          resp.http.restarts |                                 | '0'                 |                                                      | 
+     | |      resp.http.x-powered-by |                                 | 'hoge' -> [unset]   |                                                      | 
+     | |                  resp.proto | 'HTTP/1.1'                      |                     |                                                      | 
+     | |                 resp.reason | 'OK'                            |                     |                                                      | 
+     | |                 resp.status | '200'                           |                     |                                                      | 
+     | +-----------------------------+---------------------------------+---------------------+------------------------------------------------------+
      |                 | 
      |                 > ########################################
      |                 > #                 ESI                  #
@@ -510,11 +508,11 @@ I'm thinking output format now...
      |                 > >               vcl_recv               >
      |                 > >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
      |                 >    | 
-     |                 >    | +-----------+----------------------+------+------+
-     |                 >    | |       key |         init         | work | fini | 
-     |                 >    | +-----------+----------------------+------+------+
-     |                 >    | | client.ip | '192.168.1.30 43853' |      |      | 
-     |                 >    | +-----------+----------------------+------+------+
+     |                 >    | +---------------------+----------------------+---------------------+---------------------+
+     |                 >    | |                 key | Before vcl funciton  |   In vcl function   | After vcl function  | 
+     |                 >    | +---------------------+----------------------+---------------------+---------------------+
+     |                 >    | |           client.ip | '192.168.1.30 43853' |                     |                     | 
+     |                 >    | +---------------------+----------------------+---------------------+---------------------+
      |                 >    | 
      |                 > >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
      |                 > >               vcl_hash               >
@@ -534,71 +532,71 @@ I'm thinking output format now...
      |                 >    |                 > >          vcl_backend_fetch           >
      |                 >    |                 > >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
      |                 >    |                 >    | 
-     |                 >    |                 >    | +----------------------------+-------------------------+------+------+
-     |                 >    |                 >    | |                        key |          init           | work | fini | 
-     |                 >    |                 >    | +----------------------------+-------------------------+------+------+
-     |                 >    |                 >    | |          bereq.http.Accept | '*/*'                   |      |      | 
-     |                 >    |                 >    | |            bereq.http.Host | '192.168.1.37:6081'     |      |      | 
-     |                 >    |                 >    | |      bereq.http.User-Agent | 'Wget/1.15 (linux-gnu)' |      |      | 
-     |                 >    |                 >    | | bereq.http.X-Forwarded-For | '192.168.1.30'          |      |      | 
-     |                 >    |                 >    | |       bereq.http.X-Varnish | '34481'                 |      |      | 
-     |                 >    |                 >    | |        bereq.http.hogehoge | 'mage'                  |      |      | 
-     |                 >    |                 >    | |               bereq.method | 'GET'                   |      |      | 
-     |                 >    |                 >    | |                bereq.proto | 'HTTP/1.1'              |      |      | 
-     |                 >    |                 >    | |                  bereq.url | '/slow.php'             |      |      | 
-     |                 >    |                 >    | +----------------------------+-------------------------+------+------+
+     |                 >    |                 >    | +----------------------------+-------------------------+---------------------+---------------------+
+     |                 >    |                 >    | |                        key |   Before vcl funciton   |   In vcl function   | After vcl function  | 
+     |                 >    |                 >    | +----------------------------+-------------------------+---------------------+---------------------+
+     |                 >    |                 >    | |          bereq.http.Accept | '*/*'                   |                     |                     | 
+     |                 >    |                 >    | |            bereq.http.Host | '192.168.1.37:6081'     |                     |                     | 
+     |                 >    |                 >    | |      bereq.http.User-Agent | 'Wget/1.15 (linux-gnu)' |                     |                     | 
+     |                 >    |                 >    | | bereq.http.X-Forwarded-For | '192.168.1.30'          |                     |                     | 
+     |                 >    |                 >    | |       bereq.http.X-Varnish | '34481'                 |                     |                     | 
+     |                 >    |                 >    | |        bereq.http.hogehoge | 'mage'                  |                     |                     | 
+     |                 >    |                 >    | |               bereq.method | 'GET'                   |                     |                     | 
+     |                 >    |                 >    | |                bereq.proto | 'HTTP/1.1'              |                     |                     | 
+     |                 >    |                 >    | |                  bereq.url | '/slow.php'             |                     |                     | 
+     |                 >    |                 >    | +----------------------------+-------------------------+---------------------+---------------------+
      |                 >    |                 >    | 
      |                 >    |                 > >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
      |                 >    |                 > >         vcl_backend_response         >
      |                 >    |                 > >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
      |                 >    |                 >    | 
-     |                 >    |                 >    | +----------------------------+---------------------------------+------+---------------------------------+
-     |                 >    |                 >    | |                        key |              init               | work |              fini               | 
-     |                 >    |                 >    | +----------------------------+---------------------------------+------+---------------------------------+
-     |                 >    |                 >    | | beresp.http.Content-Length | '3'                             |      |                                 | 
-     |                 >    |                 >    | |   beresp.http.Content-Type | 'text/html'                     |      |                                 | 
-     |                 >    |                 >    | |           beresp.http.Date | 'Sat, 27 Jun 2015 17:26:06 GMT' |      |                                 | 
-     |                 >    |                 >    | |         beresp.http.Server | 'Apache/2.2.22 (Ubuntu)'        |      |                                 | 
-     |                 >    |                 >    | |           beresp.http.Vary | 'Accept-Encoding'               |      |                                 | 
-     |                 >    |                 >    | |   beresp.http.X-Powered-By | 'PHP/5.3.10-1ubuntu3.13'        |      |                                 | 
-     |                 >    |                 >    | |               beresp.proto | 'HTTP/1.1'                      |      |                                 | 
-     |                 >    |                 >    | |              beresp.reason | 'OK'                            |      |                                 | 
-     |                 >    |                 >    | |              beresp.status | '200'                           |      |                                 | 
-     |                 >    |                 >    | |    obj.http.Content-Length |                                 |      | '3'                             | 
-     |                 >    |                 >    | |      obj.http.Content-Type |                                 |      | 'text/html'                     | 
-     |                 >    |                 >    | |              obj.http.Date |                                 |      | 'Sat, 27 Jun 2015 17:26:06 GMT' | 
-     |                 >    |                 >    | |            obj.http.Server |                                 |      | 'Apache/2.2.22 (Ubuntu)'        | 
-     |                 >    |                 >    | |              obj.http.Vary |                                 |      | 'Accept-Encoding'               | 
-     |                 >    |                 >    | |      obj.http.X-Powered-By |                                 |      | 'PHP/5.3.10-1ubuntu3.13'        | 
-     |                 >    |                 >    | |                  obj.proto |                                 |      | 'HTTP/1.1'                      | 
-     |                 >    |                 >    | |                 obj.reason |                                 |      | 'OK'                            | 
-     |                 >    |                 >    | |                 obj.status |                                 |      | '200'                           | 
-     |                 >    |                 >    | +----------------------------+---------------------------------+------+---------------------------------+
+     |                 >    |                 >    | +----------------------------+---------------------------------+---------------------+---------------------------------+
+     |                 >    |                 >    | |                        key |       Before vcl funciton       |   In vcl function   |       After vcl function        | 
+     |                 >    |                 >    | +----------------------------+---------------------------------+---------------------+---------------------------------+
+     |                 >    |                 >    | | beresp.http.Content-Length | '3'                             |                     |                                 | 
+     |                 >    |                 >    | |   beresp.http.Content-Type | 'text/html'                     |                     |                                 | 
+     |                 >    |                 >    | |           beresp.http.Date | 'Sat, 27 Jun 2015 17:26:06 GMT' |                     |                                 | 
+     |                 >    |                 >    | |         beresp.http.Server | 'Apache/2.2.22 (Ubuntu)'        |                     |                                 | 
+     |                 >    |                 >    | |           beresp.http.Vary | 'Accept-Encoding'               |                     |                                 | 
+     |                 >    |                 >    | |   beresp.http.X-Powered-By | 'PHP/5.3.10-1ubuntu3.13'        |                     |                                 | 
+     |                 >    |                 >    | |               beresp.proto | 'HTTP/1.1'                      |                     |                                 | 
+     |                 >    |                 >    | |              beresp.reason | 'OK'                            |                     |                                 | 
+     |                 >    |                 >    | |              beresp.status | '200'                           |                     |                                 | 
+     |                 >    |                 >    | |    obj.http.Content-Length |                                 |                     | '3'                             | 
+     |                 >    |                 >    | |      obj.http.Content-Type |                                 |                     | 'text/html'                     | 
+     |                 >    |                 >    | |              obj.http.Date |                                 |                     | 'Sat, 27 Jun 2015 17:26:06 GMT' | 
+     |                 >    |                 >    | |            obj.http.Server |                                 |                     | 'Apache/2.2.22 (Ubuntu)'        | 
+     |                 >    |                 >    | |              obj.http.Vary |                                 |                     | 'Accept-Encoding'               | 
+     |                 >    |                 >    | |      obj.http.X-Powered-By |                                 |                     | 'PHP/5.3.10-1ubuntu3.13'        | 
+     |                 >    |                 >    | |                  obj.proto |                                 |                     | 'HTTP/1.1'                      | 
+     |                 >    |                 >    | |                 obj.reason |                                 |                     | 'OK'                            | 
+     |                 >    |                 >    | |                 obj.status |                                 |                     | '200'                           | 
+     |                 >    |                 >    | +----------------------------+---------------------------------+---------------------+---------------------------------+
      |                 >    | 
      |                 > >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
      |                 > >             vcl_deliver              >
      |                 > >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
      |                 >    | 
-     |                 >    | +-----------------------------+---------------------------------+-------------------+--------------+
-     |                 >    | |                         key |              init               |       work        |     fini     | 
-     |                 >    | +-----------------------------+---------------------------------+-------------------+--------------+
-     |                 >    | |               resp.http.Age | '0'                             |                   |              | 
-     |                 >    | |        resp.http.Connection |                                 |                   | 'keep-alive' | 
-     |                 >    | |    resp.http.Content-Length | '3'                             |                   | [unset]      | 
-     |                 >    | |      resp.http.Content-Type | 'text/html'                     |                   |              | 
-     |                 >    | |              resp.http.Date | 'Sat, 27 Jun 2015 17:26:06 GMT' |                   |              | 
-     |                 >    | |            resp.http.Server | 'Apache/2.2.22 (Ubuntu)'        |                   |              | 
-     |                 >    | | resp.http.Transfer-Encoding |                                 |                   | 'chunked'    | 
-     |                 >    | |              resp.http.Vary | 'Accept-Encoding'               |                   |              | 
-     |                 >    | |               resp.http.Via | '1.1 varnish-v4'                |                   |              | 
-     |                 >    | |      resp.http.X-Powered-By | 'PHP/5.3.10-1ubuntu3.13'        | [unset]           |              | 
-     |                 >    | |         resp.http.X-Varnish | '34480'                         |                   |              | 
-     |                 >    | |          resp.http.restarts |                                 | '0'               |              | 
-     |                 >    | |      resp.http.x-powered-by |                                 | 'hoge' -> [unset] |              | 
-     |                 >    | |                  resp.proto | 'HTTP/1.1'                      |                   |              | 
-     |                 >    | |                 resp.reason | 'OK'                            |                   |              | 
-     |                 >    | |                 resp.status | '200'                           |                   |              | 
-     |                 >    | +-----------------------------+---------------------------------+-------------------+--------------+
+     |                 >    | +-----------------------------+---------------------------------+---------------------+---------------------+
+     |                 >    | |                         key |       Before vcl funciton       |   In vcl function   | After vcl function  | 
+     |                 >    | +-----------------------------+---------------------------------+---------------------+---------------------+
+     |                 >    | |               resp.http.Age | '0'                             |                     |                     | 
+     |                 >    | |        resp.http.Connection |                                 |                     | 'keep-alive'        | 
+     |                 >    | |    resp.http.Content-Length | '3'                             |                     | [unset]             | 
+     |                 >    | |      resp.http.Content-Type | 'text/html'                     |                     |                     | 
+     |                 >    | |              resp.http.Date | 'Sat, 27 Jun 2015 17:26:06 GMT' |                     |                     | 
+     |                 >    | |            resp.http.Server | 'Apache/2.2.22 (Ubuntu)'        |                     |                     | 
+     |                 >    | | resp.http.Transfer-Encoding |                                 |                     | 'chunked'           | 
+     |                 >    | |              resp.http.Vary | 'Accept-Encoding'               |                     |                     | 
+     |                 >    | |               resp.http.Via | '1.1 varnish-v4'                |                     |                     | 
+     |                 >    | |      resp.http.X-Powered-By | 'PHP/5.3.10-1ubuntu3.13'        | [unset]             |                     | 
+     |                 >    | |         resp.http.X-Varnish | '34480'                         |                     |                     | 
+     |                 >    | |          resp.http.restarts |                                 | '0'                 |                     | 
+     |                 >    | |      resp.http.x-powered-by |                                 | 'hoge' -> [unset]   |                     | 
+     |                 >    | |                  resp.proto | 'HTTP/1.1'                      |                     |                     | 
+     |                 >    | |                 resp.reason | 'OK'                            |                     |                     | 
+     |                 >    | |                 resp.status | '200'                           |                     |                     | 
+     |                 >    | +-----------------------------+---------------------------------+---------------------+---------------------+
      |                 | 
      |                 > ########################################
      |                 > #                 ESI                  #
@@ -610,11 +608,11 @@ I'm thinking output format now...
      |                 > >               vcl_recv               >
      |                 > >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
      |                 >    | 
-     |                 >    | +-----------+----------------------+------+------+
-     |                 >    | |       key |         init         | work | fini | 
-     |                 >    | +-----------+----------------------+------+------+
-     |                 >    | | client.ip | '192.168.1.30 43853' |      |      | 
-     |                 >    | +-----------+----------------------+------+------+
+     |                 >    | +---------------------+----------------------+---------------------+---------------------+
+     |                 >    | |                 key | Before vcl funciton  |   In vcl function   | After vcl function  | 
+     |                 >    | +---------------------+----------------------+---------------------+---------------------+
+     |                 >    | |           client.ip | '192.168.1.30 43853' |                     |                     | 
+     |                 >    | +---------------------+----------------------+---------------------+---------------------+
      |                 >    | 
      |                 > >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
      |                 > >               vcl_hash               >
@@ -634,77 +632,77 @@ I'm thinking output format now...
      |                 >    |                 > >          vcl_backend_fetch           >
      |                 >    |                 > >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
      |                 >    |                 >    | 
-     |                 >    |                 >    | +----------------------------+-------------------------+------+------+
-     |                 >    |                 >    | |                        key |          init           | work | fini | 
-     |                 >    |                 >    | +----------------------------+-------------------------+------+------+
-     |                 >    |                 >    | |          bereq.http.Accept | '*/*'                   |      |      | 
-     |                 >    |                 >    | |            bereq.http.Host | '192.168.1.37:6081'     |      |      | 
-     |                 >    |                 >    | |      bereq.http.User-Agent | 'Wget/1.15 (linux-gnu)' |      |      | 
-     |                 >    |                 >    | | bereq.http.X-Forwarded-For | '192.168.1.30'          |      |      | 
-     |                 >    |                 >    | |       bereq.http.X-Varnish | '34483'                 |      |      | 
-     |                 >    |                 >    | |        bereq.http.hogehoge | 'mage'                  |      |      | 
-     |                 >    |                 >    | |               bereq.method | 'GET'                   |      |      | 
-     |                 >    |                 >    | |                bereq.proto | 'HTTP/1.1'              |      |      | 
-     |                 >    |                 >    | |                  bereq.url | '/x.html'               |      |      | 
-     |                 >    |                 >    | +----------------------------+-------------------------+------+------+
+     |                 >    |                 >    | +----------------------------+-------------------------+---------------------+---------------------+
+     |                 >    |                 >    | |                        key |   Before vcl funciton   |   In vcl function   | After vcl function  | 
+     |                 >    |                 >    | +----------------------------+-------------------------+---------------------+---------------------+
+     |                 >    |                 >    | |          bereq.http.Accept | '*/*'                   |                     |                     | 
+     |                 >    |                 >    | |            bereq.http.Host | '192.168.1.37:6081'     |                     |                     | 
+     |                 >    |                 >    | |      bereq.http.User-Agent | 'Wget/1.15 (linux-gnu)' |                     |                     | 
+     |                 >    |                 >    | | bereq.http.X-Forwarded-For | '192.168.1.30'          |                     |                     | 
+     |                 >    |                 >    | |       bereq.http.X-Varnish | '34483'                 |                     |                     | 
+     |                 >    |                 >    | |        bereq.http.hogehoge | 'mage'                  |                     |                     | 
+     |                 >    |                 >    | |               bereq.method | 'GET'                   |                     |                     | 
+     |                 >    |                 >    | |                bereq.proto | 'HTTP/1.1'              |                     |                     | 
+     |                 >    |                 >    | |                  bereq.url | '/x.html'               |                     |                     | 
+     |                 >    |                 >    | +----------------------------+-------------------------+---------------------+---------------------+
      |                 >    |                 >    | 
      |                 >    |                 > >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
      |                 >    |                 > >         vcl_backend_response         >
      |                 >    |                 > >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
      |                 >    |                 >    | 
-     |                 >    |                 >    | +----------------------------+---------------------------------+------+---------------------------------+
-     |                 >    |                 >    | |                        key |              init               | work |              fini               | 
-     |                 >    |                 >    | +----------------------------+---------------------------------+------+---------------------------------+
-     |                 >    |                 >    | |  beresp.http.Accept-Ranges | 'bytes'                         |      |                                 | 
-     |                 >    |                 >    | | beresp.http.Content-Length | '11'                            |      |                                 | 
-     |                 >    |                 >    | |   beresp.http.Content-Type | 'text/html'                     |      |                                 | 
-     |                 >    |                 >    | |           beresp.http.Date | 'Sat, 27 Jun 2015 17:26:07 GMT' |      |                                 | 
-     |                 >    |                 >    | |           beresp.http.ETag | '"280ea4-b-50f5f855c1b9e"'      |      |                                 | 
-     |                 >    |                 >    | |  beresp.http.Last-Modified | 'Wed, 18 Feb 2015 16:43:37 GMT' |      |                                 | 
-     |                 >    |                 >    | |         beresp.http.Server | 'Apache/2.2.22 (Ubuntu)'        |      |                                 | 
-     |                 >    |                 >    | |           beresp.http.Vary | 'Accept-Encoding'               |      |                                 | 
-     |                 >    |                 >    | |               beresp.proto | 'HTTP/1.1'                      |      |                                 | 
-     |                 >    |                 >    | |              beresp.reason | 'OK'                            |      |                                 | 
-     |                 >    |                 >    | |              beresp.status | '200'                           |      |                                 | 
-     |                 >    |                 >    | |     obj.http.Accept-Ranges |                                 |      | 'bytes'                         | 
-     |                 >    |                 >    | |    obj.http.Content-Length |                                 |      | '11'                            | 
-     |                 >    |                 >    | |      obj.http.Content-Type |                                 |      | 'text/html'                     | 
-     |                 >    |                 >    | |              obj.http.Date |                                 |      | 'Sat, 27 Jun 2015 17:26:07 GMT' | 
-     |                 >    |                 >    | |              obj.http.ETag |                                 |      | '"280ea4-b-50f5f855c1b9e"'      | 
-     |                 >    |                 >    | |     obj.http.Last-Modified |                                 |      | 'Wed, 18 Feb 2015 16:43:37 GMT' | 
-     |                 >    |                 >    | |            obj.http.Server |                                 |      | 'Apache/2.2.22 (Ubuntu)'        | 
-     |                 >    |                 >    | |              obj.http.Vary |                                 |      | 'Accept-Encoding'               | 
-     |                 >    |                 >    | |                  obj.proto |                                 |      | 'HTTP/1.1'                      | 
-     |                 >    |                 >    | |                 obj.reason |                                 |      | 'OK'                            | 
-     |                 >    |                 >    | |                 obj.status |                                 |      | '200'                           | 
-     |                 >    |                 >    | +----------------------------+---------------------------------+------+---------------------------------+
+     |                 >    |                 >    | +----------------------------+---------------------------------+---------------------+---------------------------------+
+     |                 >    |                 >    | |                        key |       Before vcl funciton       |   In vcl function   |       After vcl function        | 
+     |                 >    |                 >    | +----------------------------+---------------------------------+---------------------+---------------------------------+
+     |                 >    |                 >    | |  beresp.http.Accept-Ranges | 'bytes'                         |                     |                                 | 
+     |                 >    |                 >    | | beresp.http.Content-Length | '11'                            |                     |                                 | 
+     |                 >    |                 >    | |   beresp.http.Content-Type | 'text/html'                     |                     |                                 | 
+     |                 >    |                 >    | |           beresp.http.Date | 'Sat, 27 Jun 2015 17:26:07 GMT' |                     |                                 | 
+     |                 >    |                 >    | |           beresp.http.ETag | '"280ea4-b-50f5f855c1b9e"'      |                     |                                 | 
+     |                 >    |                 >    | |  beresp.http.Last-Modified | 'Wed, 18 Feb 2015 16:43:37 GMT' |                     |                                 | 
+     |                 >    |                 >    | |         beresp.http.Server | 'Apache/2.2.22 (Ubuntu)'        |                     |                                 | 
+     |                 >    |                 >    | |           beresp.http.Vary | 'Accept-Encoding'               |                     |                                 | 
+     |                 >    |                 >    | |               beresp.proto | 'HTTP/1.1'                      |                     |                                 | 
+     |                 >    |                 >    | |              beresp.reason | 'OK'                            |                     |                                 | 
+     |                 >    |                 >    | |              beresp.status | '200'                           |                     |                                 | 
+     |                 >    |                 >    | |     obj.http.Accept-Ranges |                                 |                     | 'bytes'                         | 
+     |                 >    |                 >    | |    obj.http.Content-Length |                                 |                     | '11'                            | 
+     |                 >    |                 >    | |      obj.http.Content-Type |                                 |                     | 'text/html'                     | 
+     |                 >    |                 >    | |              obj.http.Date |                                 |                     | 'Sat, 27 Jun 2015 17:26:07 GMT' | 
+     |                 >    |                 >    | |              obj.http.ETag |                                 |                     | '"280ea4-b-50f5f855c1b9e"'      | 
+     |                 >    |                 >    | |     obj.http.Last-Modified |                                 |                     | 'Wed, 18 Feb 2015 16:43:37 GMT' | 
+     |                 >    |                 >    | |            obj.http.Server |                                 |                     | 'Apache/2.2.22 (Ubuntu)'        | 
+     |                 >    |                 >    | |              obj.http.Vary |                                 |                     | 'Accept-Encoding'               | 
+     |                 >    |                 >    | |                  obj.proto |                                 |                     | 'HTTP/1.1'                      | 
+     |                 >    |                 >    | |                 obj.reason |                                 |                     | 'OK'                            | 
+     |                 >    |                 >    | |                 obj.status |                                 |                     | '200'                           | 
+     |                 >    |                 >    | +----------------------------+---------------------------------+---------------------+---------------------------------+
      |                 >    | 
      |                 > >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
      |                 > >             vcl_deliver              >
      |                 > >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
      |                 >    | 
-     |                 >    | +-----------------------------+---------------------------------+-------------------+-----------------------------------------+
-     |                 >    | |                         key |              init               |       work        |                  fini                   | 
-     |                 >    | +-----------------------------+---------------------------------+-------------------+-----------------------------------------+
-     |                 >    | |     resp.http.Accept-Ranges | 'bytes'                         |                   |                                         | 
-     |                 >    | |               resp.http.Age | '0'                             |                   |                                         | 
-     |                 >    | |        resp.http.Connection |                                 |                   | 'keep-alive'                            | 
-     |                 >    | |    resp.http.Content-Length | '11'                            |                   | [unset]                                 | 
-     |                 >    | |      resp.http.Content-Type | 'text/html'                     |                   |                                         | 
-     |                 >    | |              resp.http.Date | 'Sat, 27 Jun 2015 17:26:07 GMT' |                   |                                         | 
-     |                 >    | |              resp.http.ETag | '"280ea4-b-50f5f855c1b9e"'      |                   | [unset] -> 'W/"280ea4-b-50f5f855c1b9e"' | 
-     |                 >    | |     resp.http.Last-Modified | 'Wed, 18 Feb 2015 16:43:37 GMT' |                   |                                         | 
-     |                 >    | |            resp.http.Server | 'Apache/2.2.22 (Ubuntu)'        |                   |                                         | 
-     |                 >    | | resp.http.Transfer-Encoding |                                 |                   | 'chunked'                               | 
-     |                 >    | |              resp.http.Vary | 'Accept-Encoding'               |                   |                                         | 
-     |                 >    | |               resp.http.Via | '1.1 varnish-v4'                |                   |                                         | 
-     |                 >    | |         resp.http.X-Varnish | '34482'                         |                   |                                         | 
-     |                 >    | |          resp.http.restarts |                                 | '0'               |                                         | 
-     |                 >    | |      resp.http.x-powered-by |                                 | 'hoge' -> [unset] |                                         | 
-     |                 >    | |                  resp.proto | 'HTTP/1.1'                      |                   |                                         | 
-     |                 >    | |                 resp.reason | 'OK'                            |                   |                                         | 
-     |                 >    | |                 resp.status | '200'                           |                   |                                         | 
-     |                 >    | +-----------------------------+---------------------------------+-------------------+-----------------------------------------+
+     |                 >    | +-----------------------------+---------------------------------+---------------------+-----------------------------------------+
+     |                 >    | |                         key |       Before vcl funciton       |   In vcl function   |           After vcl function            | 
+     |                 >    | +-----------------------------+---------------------------------+---------------------+-----------------------------------------+
+     |                 >    | |     resp.http.Accept-Ranges | 'bytes'                         |                     |                                         | 
+     |                 >    | |               resp.http.Age | '0'                             |                     |                                         | 
+     |                 >    | |        resp.http.Connection |                                 |                     | 'keep-alive'                            | 
+     |                 >    | |    resp.http.Content-Length | '11'                            |                     | [unset]                                 | 
+     |                 >    | |      resp.http.Content-Type | 'text/html'                     |                     |                                         | 
+     |                 >    | |              resp.http.Date | 'Sat, 27 Jun 2015 17:26:07 GMT' |                     |                                         | 
+     |                 >    | |              resp.http.ETag | '"280ea4-b-50f5f855c1b9e"'      |                     | [unset] -> 'W/"280ea4-b-50f5f855c1b9e"' | 
+     |                 >    | |     resp.http.Last-Modified | 'Wed, 18 Feb 2015 16:43:37 GMT' |                     |                                         | 
+     |                 >    | |            resp.http.Server | 'Apache/2.2.22 (Ubuntu)'        |                     |                                         | 
+     |                 >    | | resp.http.Transfer-Encoding |                                 |                     | 'chunked'                               | 
+     |                 >    | |              resp.http.Vary | 'Accept-Encoding'               |                     |                                         | 
+     |                 >    | |               resp.http.Via | '1.1 varnish-v4'                |                     |                                         | 
+     |                 >    | |         resp.http.X-Varnish | '34482'                         |                     |                                         | 
+     |                 >    | |          resp.http.restarts |                                 | '0'                 |                                         | 
+     |                 >    | |      resp.http.x-powered-by |                                 | 'hoge' -> [unset]   |                                         | 
+     |                 >    | |                  resp.proto | 'HTTP/1.1'                      |                     |                                         | 
+     |                 >    | |                 resp.reason | 'OK'                            |                     |                                         | 
+     |                 >    | |                 resp.status | '200'                           |                     |                                         | 
+     |                 >    | +-----------------------------+---------------------------------+---------------------+-----------------------------------------+
   
   
   ************************************************************
@@ -933,7 +931,6 @@ I'm thinking output format now...
      |   ESI_BodyBytes | 227
      |         ReqAcct | 123 0 123 378 283 661
   ----------------------------------------------------------------------------------------------------
-
 
 
 HISTORY
