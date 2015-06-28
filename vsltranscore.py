@@ -1,84 +1,8 @@
 # coding: utf-8
 import varnishapi
 
-import threading,time,signal,copy,sys,re,os,time
+import threading,time,signal,copy,sys,re,os,time,binascii
 
-'''
-ESIの時のreq.*が親のfini変数に交じるのでなんとかする
-	→ESIのときだけ特殊対応としてfini -> (child)initに変更するかな(reqのみ)
-	→やっぱ無理に捻じ曲げなくていいや(bereqでわかるし
-	
-	・-fでファイル読み込むようにする(-graw -gvxidぐらいはサポートしたい input -/mod/-> raw -/mod/-> cbd）
-	・強制的にflushするモードをつけるかどうか検討（個人的にはやめたいけどセッションぐらいはskipしてもいいかも
-'''
-
-'''
-- [VXID-TREE]
-  self.sess = {
-    1:[None,2,3,None],#idx=0 is parent vxid. value is "None" if have not parent vxid(RootVXID)
-    2:[1,4,None]
-    3:[1,None]
-    4:[2,None]#If last value is "None", closed VXID array.
-  }
-  self.vxid = {
-      vxid : [
-          1,2,3.... # 
-      ]
-      data : {
-          actionidx:['recv','hash'...]
-          action : {
-              recv:
-                # [init] --#call vcl_func#--> [work] --#return vcl_func#--> [fini]
-                init:{
-                  var:{
-                    'req.http.hoge':['/a','/b',None], # None is unset value.
-                  },
-                  event:[
-                      {k:'TimeStamp',v:'hogehoge'},
-                      {k:'...',v:'...'},
-                  ]
-                },
-                work:{
-                  var:{
-                    'req.http.hoge':['/a','/b',None], # None is unset value.
-                  },
-                  event:[
-                      {k:'TimeStamp',v:'hogehoge'},
-                      {k:'',v:''},
-                  ]
-                },
-                fini:{
-                  var:{
-                    'req.http.hoge':['/a','/b',None], # None is unset value.
-                  },
-                  event:[
-                      {k:'TimeStamp',v:'hogehoge'},
-                      {k:'',v:''},
-                  ]
-                }
-              hash:{...}
-              ...
-              tmp:{...}# uncommitted data.
-          }
-          timestamp:[
-            {'k':'Process','abs':1435412407.697665,'offset':0.000042}
-          ]
-      },
-  }
-
-
-self.vxid[vxid] = {'actidx':[], 'act':{},'actcur':'initial','actnxt':None,'actstat':'init','timestamp':[]}
-actcur = 現在のアクション
-actnxt = 次のアクション(vcl_callで変更）
-actstat= 初期状態なのかwork状態なのか
-              +-
-
-'''
-
-
-
-#actはvcl_recvを呼び出される前にCALLされるものがあるのでそこら辺を考慮する
-#junkデータを排除するようにする
 
 class log2vsl:
 	def __init__(self):
@@ -229,19 +153,8 @@ class vslTrans:
 		
 
 	def __init__(self, opts):
-		'''
-		test = log2vsl()
-		test.read('./tmp/raw.log')
-		print test.mode
-		test.read('./tmp/vxid.log')
-		print test.mode
-		test.read('./tmp/request.log')
-		print test.mode
-		test.read('./tmp/session.log')
-		print test.mode
-		'''
 		
-		self.debug = 1
+		#self.debug = 1
 		self.debug = 0
 		self.mode = 'request'
 		#self.mode = 'session'
@@ -335,7 +248,6 @@ class vslTrans:
 		self.filter(ttag,cbd)
 	
 	def filter(self,ttag,cbd):
-		
 		vxid = cbd['vxid']
 		key = ttag
 		if key not in self.__filter:
@@ -368,9 +280,6 @@ class vslTrans:
 			if v['k'] == k:
 				return v['v']
 		return ''
-
-
-
 
 		
 	def flushSess(self,vxid,lv,mode,prnDone):
@@ -532,10 +441,7 @@ class vslTrans:
 		for vxid in prnDone.values():
 			del self.sess[vxid]
 			del self.vxid[vxid]
-	
-	def printVal(self,k,v):
-		print "%30s | %s" % (k,v)
-
+			
 	def printCenter(self,num,str):
 		l  = len(str)
 		ll = (num - l)/2
@@ -558,10 +464,9 @@ class vslTrans:
 		self.flushSess(self.getRootVXID(vxid),1,'event',prnDone)
 		print '-'*100
 		print "\n"
-		
-		
 		#flush
 		self.rmData(prnDone)
+	
 	########################################################################
 	def fExistVXID(self, ttag, vxid, cbd):
 		if vxid in self.sess:
@@ -649,7 +554,7 @@ class vslTrans:
 		return 1
 		
 	def fVCLReturn(self, ttag, vxid, cbd):
-		#わざわざ名前変えるか再検討(vcl_returnに戻す？VCL表記に合わす？）
+		#todo:わざわざ名前変えるか再検討(vcl_returnに戻す？VCL表記に合わす？）
 		if ttag == 'VCL_return':
 			ttag = 'return'
 		self.appendEvent(vxid,ttag,cbd['data'])
@@ -677,48 +582,75 @@ class vslTrans:
 
 	def fEventStor(self, ttag, vxid, cbd):
 		#default stor 
-		self.appendEvent(vxid,ttag,cbd['data'])
+		if cbd['isbin']:
+			self.appendEvent(vxid,ttag,"(0x%s) %s" % (binascii.hexlify(cbd['data']),cbd['data']))
+		else:
+			self.appendEvent(vxid,ttag,cbd['data'])
 		return 1
 
 		
 	
+'''
+----------------------------------------
+- [VXID-TREE]
+  self.sess = {
+    1:[None,2,3,None],#idx=0 is parent vxid. value is "None" if have not parent vxid(RootVXID)
+    2:[1,4,None]
+    3:[1,None]
+    4:[2,None]#If last value is "None", closed VXID array.
+  }
+  self.vxid = {
+      vxid : [
+          1,2,3.... # 
+      ]
+      data : {
+          actionidx:['recv','hash'...]
+          action : {
+              recv:
+                # [init] --#call vcl_func#--> [work] --#return vcl_func#--> [fini]
+                init:{
+                  var:{
+                    'req.http.hoge':['/a','/b',None], # None is unset value.
+                  },
+                  event:[
+                      {k:'TimeStamp',v:'hogehoge'},
+                      {k:'...',v:'...'},
+                  ]
+                },
+                work:{
+                  var:{
+                    'req.http.hoge':['/a','/b',None], # None is unset value.
+                  },
+                  event:[
+                      {k:'TimeStamp',v:'hogehoge'},
+                      {k:'',v:''},
+                  ]
+                },
+                fini:{
+                  var:{
+                    'req.http.hoge':['/a','/b',None], # None is unset value.
+                  },
+                  event:[
+                      {k:'TimeStamp',v:'hogehoge'},
+                      {k:'',v:''},
+                  ]
+                }
+              hash:{...}
+              ...
+              tmp:{...}# uncommitted data.
+          }
+          timestamp:[
+            {'k':'Process','abs':1435412407.697665,'offset':0.000042}
+          ]
+      },
+  }
 
+
+self.vxid[vxid] = {'actidx':[], 'act':{},'actcur':'initial','actnxt':None,'actstat':'init','timestamp':[]}
+actcur = 現在のアクション
+actnxt = 次のアクション(vcl_callで変更）
+actstat= 初期状態なのかwork状態なのか
 
 '''
-       Timestamp - Timing information
-              Contains timing information for the Varnish worker threads.
-
-              Time stamps are issued by Varnish on certain events, and show the absolute time of the event, the time spent since the start of the work unit, and the time spent since the last timestamp was logged. See vsl(7)
-              for information about the individual timestamps.
-
-              The format is:
-
-              %s: %f %f %f
-              |   |  |  |
-              |   |  |  +- Time since last timestamp
-              |   |  +---- Time since start of work unit
-              |   +------- Absolute time of event
-              +----------- Event label
 
 
-・貼られたrawログからsessionを復元するロジックは作る(raw2session)
-・ヘッダはスタック格納
-
-SessionOoen
- |+ http://xxx/xxx/
- ||+<<vcl_recv>>
- |||+req.url = hoge
- |||+req.url = hoge
- |||+req.url = hoge -> XXX -> CCC
- ||
- ||+<<vcl_recv>>
- |||+req.url = hoge
- |||+req.url = hoge
- |||+req.url = hoge
- ||
- ||+<<vcl_recv>>
- |||+req.url = hoge
- |||+req.url = hoge
- |||+req.url = hoge
-
-'''

@@ -18,7 +18,7 @@ if __name__ == '__main__':
 		opts,args = getopt.getopt(sys.argv[1:],"VP:q:f:")
 	except getopt.GetoptError:
 		print 'invalid option'
-		print 'usage: vsltrans -f [logfile] -q [query] -P [pid-file] -V'
+		print 'usage: vsltrans -f [logfile] -q [query] -V'
 		sys.exit(2)
 	
 	d_flag = False

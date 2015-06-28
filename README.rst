@@ -31,6 +31,21 @@ This version is under development.
 HOW TO USE
 ===========
 
+Read from log-file(raw/vxid/request/session)
+---------------------------------------------
+::
+
+  ./vsltrans.py -f test.log
+
+Using VSL Query Expressions
+--------------------------------------------
+::
+
+  # Does not support the VSL-Query, if read from log-file.
+  ./vsltrans.py -q "requrl ~ '^/test'"
+
+OUTPUT SAMPLE
+===============
 
 Original log
 ---------------------------------------
