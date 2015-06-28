@@ -8,9 +8,8 @@ ESIの時のreq.*が親のfini変数に交じるのでなんとかする
 	→ESIのときだけ特殊対応としてfini -> (child)initに変更するかな(reqのみ)
 	→やっぱ無理に捻じ曲げなくていいや(bereqでわかるし
 	
-	・変数操作がない場合はboxを書かなくてnone editぐらいの文言に変更
-	・returnの表記がくどいのでその辺をv30っぽくする
 	・-fでファイル読み込むようにする(-graw -gvxidぐらいはサポートしたい input -/mod/-> raw -/mod/-> cbd）
+	・強制的にflushするモードをつけるかどうか検討（個人的にはやめたいけどセッションぐらいはskipしてもいいかも
 '''
 
 '''
@@ -81,6 +80,148 @@ actstat= 初期状態なのかwork状態なのか
 #actはvcl_recvを呼び出される前にCALLされるものがあるのでそこら辺を考慮する
 #junkデータを排除するようにする
 
+class log2vsl:
+	def __init__(self):
+		self.raw  = []
+		self.data = {}
+		self.parse = None
+
+	def chkFmt(self):
+		re_session = re.compile(r"^\* +<< +Session +>>")
+		re_request = re.compile(r"^--")
+		re_raw     = re.compile(r"^ *\d+ [A-Z]")
+		
+		haslv = 0
+		for line in self.raw:
+			if  re_raw.match(line):
+				self.parse = self.parseRaw
+				return
+			elif '<<' in line:
+				if re_session.match(line) and haslv:
+					self.parse = self.parseSession
+					return
+			elif re_request.match(line):
+				haslv = 1
+		if haslv:
+			self.parse = self.parseRequest
+			return
+		self.parse = self.parseVXID
+		return
+		'''
+		RAW
+		    100070 Begin          c sess 0 HTTP/1
+		SESSION
+		*   << Session  >> 34477     
+		-   Begin          sess 0 HTTP/1
+		REQUEST(has lv2 line)
+		*   << Request  >> 100078    
+		-   Begin          req 100077 rxreq
+		VXID
+		other
+		'''
+		#Debug  {'level': 1L, 'type': 'c', 'reason': 2, 'vxid_parent': 0, 'length': 12L, 'tag': 1L, 'vxid': 34485, 'data': 'RES_MODE 18\x00', 'isbin': 2L}
+	def parseSession(self):
+		r  = re.compile(r"^[-0-9]+ +([^ ]+) +(.*)$")
+		rh = re.compile(r"^[\*0-9]+ +<< +([^ ]+) +>> +(\d+) *$")
+		vxid  = 0
+		pvxid = 0
+		for line in self.raw:
+			m = r.match(line)
+			if not m:
+				m = rh.match(line)
+				if not m:
+					continue
+				vxid = int(m.group(2))
+				continue
+			ttag = m.group(1)
+			data = m.group(2)
+			if ttag == 'Begin':
+				pvxid = int(data.split(' ',3)[1])
+			if vxid not in self.data:
+				self.data[vxid] = []
+			self.data[vxid].append({'ttag':ttag,'pvxid':pvxid,'cbd':{'level':1,'type':None,'reason':None,'vxid_parent':pvxid,'length':len(data),'tag':None,'vxid':vxid,'data':data,'isbin':0}})
+			
+	def parseRequest(self):
+		r  = re.compile(r"^[-0-9]+ +([^ ]+) +(.*)$")
+		rh = re.compile(r"^[\*0-9]+ +<< +([^ ]+) +>> +(\d+) *$")
+		vxid  = 0
+		pvxid = 0
+		for line in self.raw:
+			m = r.match(line)
+			if not m:
+				m = rh.match(line)
+				if not m:
+					continue
+				vxid = int(m.group(2))
+				continue
+			ttag = m.group(1)
+			data = m.group(2)
+			if ttag == 'Begin':
+				spl = data.split(' ',3)
+				if spl[0]=='req' and spl[2]=='rxreq':
+					pvxid = 0
+				else:
+					pvxid = int(spl[1])
+			if vxid not in self.data:
+				self.data[vxid] = []
+			self.data[vxid].append({'ttag':ttag,'pvxid':pvxid,'cbd':{'level':1,'type':None,'reason':None,'vxid_parent':pvxid,'length':len(data),'tag':None,'vxid':vxid,'data':data,'isbin':0}})
+
+	def parseVXID(self):
+		r  = re.compile(r"^- +([^ ]+) +(.*)$")
+		rh = re.compile(r"^\* +<< +([^ ]+) +>> +(\d+) *$")
+		vxid  = 0
+		pvxid = 0
+		for line in self.raw:
+			m = r.match(line)
+			if not m:
+				m = rh.match(line)
+				if not m:
+					continue
+				vxid = int(m.group(2))
+				continue
+			ttag = m.group(1)
+			data = m.group(2)
+			if ttag == 'Begin':
+				pvxid = int(data.split(' ',3)[1])
+			if vxid not in self.data:
+				self.data[vxid] = []
+			self.data[vxid].append({'ttag':ttag,'pvxid':pvxid,'cbd':{'level':1,'type':None,'reason':None,'vxid_parent':pvxid,'length':len(data),'tag':None,'vxid':vxid,'data':data,'isbin':0}})
+			
+	def parseRaw(self):
+		#    100073 Timestamp      c Process: 1435425931.782784 1.000796 0.000036
+		r = re.compile(r"^ *(\d+) ([^ ]+) +([^ ]) (.*)$")
+		pvxid=0
+		for line in self.raw:
+			m = r.match(line)
+			if not m:
+				continue
+			vxid = int(m.group(1))
+			if vxid==0:
+				#CLI
+				continue
+			ttag = m.group(2)
+			type = m.group(3)
+			data = m.group(4)
+			if ttag == 'Begin':
+				pvxid = int(data.split(' ',3)[1])
+			
+			if vxid not in self.data:
+				self.data[vxid] = []
+			self.data[vxid].append({'ttag':ttag,'pvxid':pvxid,'cbd':{'level':1,'type':type,'reason':None,'vxid_parent':pvxid,'length':len(data),'tag':None,'vxid':vxid,'data':data,'isbin':0}})
+			
+	def read(self,file):
+		self.raw   = []
+		self.parse = None
+		self.data  = {}
+		if not os.path.exists(file):
+			return 0
+		f = open(file)
+		for line in f.readlines():
+			self.raw.append(line)
+		f.close()
+		self.chkFmt()
+		self.parse()
+
 class vslTrans:
 	def dataClear(self):
 		self.sess  = {}
@@ -88,18 +229,36 @@ class vslTrans:
 		
 
 	def __init__(self, opts):
+		'''
+		test = log2vsl()
+		test.read('./tmp/raw.log')
+		print test.mode
+		test.read('./tmp/vxid.log')
+		print test.mode
+		test.read('./tmp/request.log')
+		print test.mode
+		test.read('./tmp/session.log')
+		print test.mode
+		'''
+		
 		self.debug = 1
 		self.debug = 0
-		
 		self.mode = 'request'
 		#self.mode = 'session'
+		
+		self.source = 'vsl'
+		
 		#一旦requestで、sessionも対応する
 		vops = ['-g',self.mode]
 		if isinstance(opts, list):
 			for o,a in opts:
-				if o == '-q':
+				if   o == '-q':
 					vops.append(o)
 					vops.append(a)
+				elif o == '-f':
+					self.source = 'file'
+					self.file   = log2vsl()
+					self.file.read(a)
 		self.vap     = varnishapi.VarnishLog(vops)
 		self.vslutil = varnishapi.VSLUtil()
 		self.dataClear()
@@ -141,6 +300,7 @@ class vslTrans:
 			'Link':			[self.fExistVXID, self.fLink],
 			'VCL_call':		[self.fExistVXID, self.fVCLCall],
 			'VCL_return':	[self.fExistVXID, self.fVCLReturn],
+			'SessClose':	[self.fExistVXID, self.fVCLReturn],
 
 			'Timestamp':	[self.fExistVXID, self.fTimestamp],
 			'__default':	[self.fExistVXID, self.fEventStor],
@@ -149,22 +309,27 @@ class vslTrans:
 		
 	
 	def execute(self):
-		while 1:
-			#dispatch
-			self.state = 0
-			ret = self.vap.Dispatch(self.vapCallBack)
-			if 0 == ret:
-				time.sleep(0.1)
+		if self.source == 'vsl':
+			while 1:
+				#dispatch
+				#self.state = 0
+				ret = self.vap.Dispatch(self.vapCallBack)
+				if 0 == ret:
+					time.sleep(0.1)
+		else:
+			for v in self.file.data.values():
+				for data in v:
+					self.filter(data['ttag'],data['cbd'])
 				
 	def vapCallBack(self, vap, cbd, priv):
 		if not cbd['isbin']:
 			cbd['length'] = cbd['length'] -1;
 			cbd['data']   = cbd['data'][:-1]
 			
-		self.filter(cbd)
+		ttag = vap.VSL_tags[cbd['tag']]
+		self.filter(ttag,cbd)
 	
-	def filter(self,cbd):
-		ttag = self.vap.VSL_tags[cbd['tag']]
+	def filter(self,ttag,cbd):
 		
 		vxid = cbd['vxid']
 		key = ttag
@@ -478,7 +643,10 @@ class vslTrans:
 		return 1
 		
 	def fVCLReturn(self, ttag, vxid, cbd):
-		self.appendEvent(vxid,'return',cbd['data'])
+		#わざわざ名前変えるか再検討(vcl_returnに戻す？VCL表記に合わす？）
+		if ttag == 'VCL_return':
+			ttag = 'return'
+		self.appendEvent(vxid,ttag,cbd['data'])
 
 		vd = self.vxid[vxid]
 		vd['act'][vd['actcur']] = copy.deepcopy(vd['act']['temp'])
@@ -487,7 +655,7 @@ class vslTrans:
 		vd['actcur']  = None
 		vd['actstat'] = 'init'
 		return 1
-		
+
 	def fRequest(self, ttag, vxid, cbd):
 		#{'level': 2L, 'type': 'c', 'reason': 2, 'vxid_parent': 1, 'length': 37L, 'tag': 27L, 'vxid': 2, 'data': 'X-Powered-By: PHP/5.3.10-1ubuntu3.13\x00', 'isbin': 0L}
 
