@@ -1,7 +1,7 @@
 # coding: utf-8
 import varnishapi
 
-import threading,time,signal,copy,sys,re,os,time
+import threading,time,signal,copy,sys,re,os,time,binascii
 
 
 class log2vsl:
@@ -582,7 +582,10 @@ class vslTrans:
 
 	def fEventStor(self, ttag, vxid, cbd):
 		#default stor 
-		self.appendEvent(vxid,ttag,cbd['data'])
+		if cbd['isbin']:
+			self.appendEvent(vxid,ttag,"(0x%s) %s" % (binascii.hexlify(cbd['data']),cbd['data']))
+		else:
+			self.appendEvent(vxid,ttag,cbd['data'])
 		return 1
 
 		
