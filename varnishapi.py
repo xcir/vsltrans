@@ -1,7 +1,7 @@
 # coding: utf-8
 
 from ctypes import *
-import sys,getopt
+import sys,getopt,time
 ###########################################
 
 class VSC_level_desc(Structure):
@@ -246,7 +246,7 @@ class VSLUtil:
         'CLI'            : '',
         'SessOpen'       : '',
         'SessClose'      : '',
-        'BackendOpen'    : '',
+        'BackendOpen'    : '', #Change key count at varnish41(4->6)
         'BackendReuse'   : '',
         'BackendClose'   : '',
         'HttpGarbage'    : '',
@@ -268,7 +268,7 @@ class VSLUtil:
         'ExpKill'        : '',
         'WorkThread'     : '',
         'ESI_xmlerror'   : '',
-        'Hash'           : '',
+        'Hash'           : '', #Change log data type(str->bin)
         'Backend_health' : '',
         'VCL_Log'        : '',
         'VCL_Error'      : '',
@@ -280,7 +280,7 @@ class VSLUtil:
         'Storage'        : '',
         'Timestamp'      : '',
         'ReqAcct'        : '',
-        'ESI_BodyBytes'  : '',
+        'ESI_BodyBytes'  : '', #Only Varnish40X
         'PipeAcct'       : '',
         'BereqAcct'      : '',
         'ReqMethod'      : 'req.method',
@@ -323,10 +323,14 @@ class VSLUtil:
         'ObjHeader'      : 'obj.http.',
         'ObjUnset'       : 'unset obj.http.',
         'ObjLost'        : '',
+        'Proxy'          : '', #Only Varnish41x
+        'ProxyGarbage'   : '', #Only Varnish41x
+        'VfpAcct'        : '', #Only Varnish41x
+        'Witness'        : '', #Only Varnish41x
     }
 
 class VarnishAPI:
-    def __init__(self, opt = '', sopath = 'libvarnishapi.so.1'):
+    def __init__(self, sopath = 'libvarnishapi.so.1'):
         self.lib     = cdll[sopath]
         self.lva     = LIBVARNISHAPI13(self.lib)
         self.defi    = VarnishAPIDefine40()
@@ -348,16 +352,16 @@ class VarnishAPI:
         
     def ArgDefault(self, op, arg):
         if   op == "n":
-            #ƒCƒ“ƒXƒ^ƒ“ƒXŽw’è
+            #ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹æŒ‡å®š
             i = self.lib.VSM_n_Arg(self.vsm, arg)
             if i <= 0:
-                error = "%s" % self.lib.VSM_Error(self.vsm)
+                error = "%s" % self.lib.VSM_Error(self.vsm).rstrip()
                 return(i)
         elif op == "N":
-            #VSMƒtƒ@ƒCƒ‹Žw’è
+            #VSMãƒ•ã‚¡ã‚¤ãƒ«æŒ‡å®š
             i = self.lib.VSM_N_Arg(self.vsm, arg)
             if i <= 0:
-                error = "%s" % self.lib.VSM_Error(self.vsm)
+                error = "%s" % self.lib.VSM_Error(self.vsm).rstrip()
                 return(i)
             self.d_opt = 1
         return(None)
@@ -366,22 +370,22 @@ class VarnishAPI:
 class VarnishStat(VarnishAPI):
     def __init__(self, opt='', sopath = 'libvarnishapi.so.1'):
         VarnishAPI.__init__(self,sopath)
-        self.lib.VSM_Open(self.vsm)
-
+        self.name = ''
         if len(opt)>0:
             self.__setArg(opt)
+        if self.lib.VSM_Open(self.vsm):
+            self.error = "Can't open VSM file (%s)" % self.lib.VSM_Error(self.vsm).rstrip()
+        else:
+            self.name = self.lva.VSM_Name(self.vsm)
         
     def __setArg(self,opt):
-        opts, args = getopt.getopt(opt,"bcCdx:X:r:q:N:n:I:i:g:")
+        opts, args = getopt.getopt(opt,"N:n:")
         error = 0
         for o in opts:
             op  = o[0].lstrip('-')
             arg = o[1]
             self.__Arg(op,arg)
         
-        #Check
-        if self.__r_arg and self.vsm:
-            error = "Can't have both -n and -r options"
         
         if error:
             self.error = error
@@ -390,7 +394,7 @@ class VarnishStat(VarnishAPI):
 
     def __Arg(self, op, arg):
         #default
-        VarnishAPI.__Arg(op, arg)
+        i = VarnishAPI.ArgDefault(self,op, arg)
         if i < 0:
             return(i)
 
@@ -420,6 +424,11 @@ class VarnishStat(VarnishAPI):
         self.lib.VSC_Iter(self.vsm, None, VSC_iter_f(self.__getstat), None);
         return self.__buf
         
+    def Fini(self):
+        if self.vsm:
+            self.lib.VSM_Delete(self.vsm)
+            self.vsm = 0
+
 
 class VarnishLog(VarnishAPI):
     def __init__(self, opt = '', sopath = 'libvarnishapi.so.1'):
@@ -461,10 +470,10 @@ class VarnishLog(VarnishAPI):
             return(i)
             
         if   op == "d":
-            #æ“ª‚©‚ç
+            #å…ˆé ­ã‹ã‚‰
             self.d_opt = 1
         elif op == "g":
-            #ƒOƒ‹[ƒsƒ“ƒOŽw’è
+            #ã‚°ãƒ«ãƒ¼ãƒ”ãƒ³ã‚°æŒ‡å®š
             self.__g_arg =  self.__VSLQ_Name2Grouping(arg)
             if   self.__g_arg == -2:
                 error = "Ambiguous grouping type: %s" % (arg)
@@ -473,12 +482,12 @@ class VarnishLog(VarnishAPI):
                 error = "Unknown grouping type: %s" % (arg)
                 return(self.__g_arg)
         #elif op == "P":
-        #    #PIDŽw’è‚Í‘Î‰ž‚µ‚È‚¢
+        #    #PIDæŒ‡å®šã¯å¯¾å¿œã—ãªã„
         elif op == "q":
             #VSL-query
             self.__q_arg = arg
         elif op == "r":
-            #ƒoƒCƒiƒŠƒtƒ@ƒCƒ‹
+            #ãƒã‚¤ãƒŠãƒªãƒ•ã‚¡ã‚¤ãƒ«
             self.__r_arg = arg
         else:
             #default
@@ -492,7 +501,7 @@ class VarnishLog(VarnishAPI):
             c = self.lva.VSL_CursorFile(self.vsl, self.__r_arg, 0);
         else:
             if self.lib.VSM_Open(self.vsm):
-                self.error = "Can't open VSM file (%s)" % self.lib.VSM_Error(self.vsm)
+                self.error = "Can't open VSM file (%s)" % self.lib.VSM_Error(self.vsm).rstrip()
                 return(0)
             self.name = self.lva.VSM_Name(self.vsm)
 
@@ -517,6 +526,8 @@ class VarnishLog(VarnishAPI):
         self.__cb   = cb
         self.__priv = priv
         if not self.vslq:
+            #Reconnect VSM
+            time.sleep(0.1)
             if self.lib.VSM_Open(self.vsm):
                 self.lib.VSM_ResetError(self.vsm)
                 return(1)
@@ -525,7 +536,8 @@ class VarnishLog(VarnishAPI):
                 self.lib.VSM_ResetError(self.vsm)
                 self.lib.VSM_Close(self.vsm)
                 return(1)
-            self.vslq = self.lva.VSLQ_New(self.vsl, POINTER(c), self.__g_arg, self.__q_arg);
+            z = cast(c,c_void_p)
+            self.vslq = self.lva.VSLQ_New(self.vsl, z, self.__g_arg, self.__q_arg);
             self.error = 'Log reacquired'
         i = self.lib.VSLQ_Dispatch(self.vslq, VSLQ_dispatch_f(self.__callBack), None);
         return(i)
