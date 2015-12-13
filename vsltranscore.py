@@ -173,6 +173,9 @@ class vslTrans:
 					self.file   = log2vsl()
 					self.file.read(a)
 		self.vap     = varnishapi.VarnishLog(vops)
+		if self.vap.error:
+			print self.vap.error
+			exit(1)
 		self.vslutil = varnishapi.VSLUtil()
 		self.dataClear()
 		self.__transWrd = {
@@ -558,6 +561,7 @@ class vslTrans:
 		if ttag == 'VCL_return':
 			ttag = 'return'
 		self.appendEvent(vxid,ttag,cbd['data'])
+
 
 		vd = self.vxid[vxid]
 		vd['act'][vd['actcur']] = copy.deepcopy(vd['act']['temp'])
