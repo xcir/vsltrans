@@ -12,9 +12,13 @@ class v4filter:
 	def __init__(self, opts, vut,outcb):
 		self.vut = vut
 		self.outcb = outcb
-		#self.debug = 1
 		self.debug = 0
 		self.dataClear()
+
+		if isinstance(opts, list):
+			for o,a in opts:
+				if o == '--debug':
+					self.debug = 1
 		self.__filter = {
 			'ReqURL':		[self.fExistVXID, self.fRequest],
 			'ReqStart':		[self.fExistVXID, self.fRequest],
