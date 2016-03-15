@@ -4,7 +4,7 @@ import varnishapi
 import threading,time,signal,copy,sys,re,os,time,binascii
 
 
-class log2vsl:
+class log2chunk:
 	def __init__(self):
 		self.__raw      = []
 		self.data       = {}
@@ -181,7 +181,7 @@ class vslTrans4:
 					vops.append(a)
 				elif o == '-f':
 					self.source = 'file'
-					self.file   = log2vsl()
+					self.file   = log2chunk()
 					self.file.read(a)
 		self.vap     = varnishapi.VarnishLog(vops)
 		if self.vap.error:
