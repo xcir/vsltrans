@@ -236,12 +236,14 @@ class im2CLI():
 		#		self.rmData(prnDone)
 		
 	def flushSess(self,vxid,lv,mode,prnDone):
+		ret = ''
 		if vxid not in prnDone:
-			print self.flushAct(vxid,'',lv,mode,prnDone),
+			ret = ret + self.flushAct(vxid,'',lv,mode,prnDone)
 			prnDone[vxid] = vxid
 		for v in self.sess[vxid][1:-1]:
-			self.flushSess(v,lv+1,mode,prnDone)
-			
+			ret = ret + self.flushSess(v,lv+1,mode,prnDone)
+		return ret
+		
 	def rebuildVar(self,vdi,minsize):
 		#key=varName
 		retv  = {}
@@ -399,13 +401,13 @@ class im2CLI():
 		print self.printBox('','*','Variable',0,60)
 
 		print self.printBox('','#','Start',1),
-		self.flushSess(rootVxid,1,'var',prnDone)
+		print self.flushSess(rootVxid,1,'var',prnDone)
 		#event
 		print "\n"
 		prnDone = {}
 		print self.printBox('','*','Event',0,60)
 		print self.printBox('','#','Start',1),
-		self.flushSess(rootVxid,1,'event',prnDone)
+		print self.flushSess(rootVxid,1,'event',prnDone)
 		print '-'*100
 		print "\n"
 		#flush
