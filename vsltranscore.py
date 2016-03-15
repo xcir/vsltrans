@@ -238,10 +238,10 @@ class im2CLI():
 	def flushSess(self,vxid,lv,mode,prnDone):
 		ret = ''
 		if vxid not in prnDone:
-			ret = ret + self.flushAct(vxid,'',lv,mode,prnDone)
+			ret += self.flushAct(vxid,'',lv,mode,prnDone)
 			prnDone[vxid] = vxid
 		for v in self.sess[vxid][1:-1]:
-			ret = ret + self.flushSess(v,lv+1,mode,prnDone)
+			ret += self.flushSess(v,lv+1,mode,prnDone)
 		return ret
 		
 	def rebuildVar(self,vdi,minsize):
@@ -288,15 +288,15 @@ class im2CLI():
 		for step in sar:
 			tmp = tmp + ('-'* rv['size'][step]) + '-+-'
 		line = prefix + tmp[:-1]
-		ret = ret + line + "\n"
+		ret += line + "\n"
 		
 		tmp =  '| ' +("%" + str(rv['keysz']) + "s | ")  % 'key'
 		for step in sar:
 			wrd = self.__transWrd[step]
 			tmp = tmp + self.printCenter(rv['size'][step],wrd) + " | "
 			#tmp = tmp + ("%" + str(rv['size'][step]) + "s | ")  % step
-		ret = ret + prefix + tmp + "\n"
-		ret = ret + line + "\n"
+		ret += prefix + tmp + "\n"
+		ret += line + "\n"
 		
 		
 		for vk, vv in sorted(rv['val'].items()):
@@ -304,8 +304,8 @@ class im2CLI():
 			for step in sar:
 				vvv = vv[step]
 				tmp = tmp + ("%-" + str(rv['size'][step]) + "s | ")  % vvv
-			ret = ret + prefix + tmp + "\n"
-		ret = ret + line + "\n"
+			ret += prefix + tmp + "\n"
+		ret += line + "\n"
 		return ret
 	
 	def printEvent(self,prefix,sp,max,k,v):
@@ -327,45 +327,45 @@ class im2CLI():
 		for step in sk:
 			for v in vdi[step]['event']:
 				if v['k'] == 'Link':
-					ret = ret + self.printEvent(prefix,sp,max,'','')
+					ret += self.printEvent(prefix,sp,max,'','')
 					if mode == 'event':
-						ret = ret + self.printEvent(prefix,sp,max,v['k'],v['v'])
+						ret += self.printEvent(prefix,sp,max,v['k'],v['v'])
 					spl = v['v'].split(' ', 2)
 					lvxid = int(spl[1])
 					prnDone[lvxid]=lvxid
 					if spl[2] == 'restart':
-						ret = ret + self.printBox(prefix,'#',"RESTART",1)
-						ret = ret + self.flushAct(lvxid, '' ,lv,mode,prnDone)
+						ret += self.printBox(prefix,'#',"RESTART",1)
+						ret += self.flushAct(lvxid, '' ,lv,mode,prnDone)
 					if spl[2] == 'esi':
-						ret = ret + self.printBox(prefix+sp+' '*max + " > ",'#',"ESI",1)
-						ret = ret + self.flushAct(lvxid, prefix+sp+' '*max + " > " ,lv+1,mode,prnDone)
+						ret += self.printBox(prefix+sp+' '*max + " > ",'#',"ESI",1)
+						ret += self.flushAct(lvxid, prefix+sp+' '*max + " > " ,lv+1,mode,prnDone)
 					else:
-						ret = ret + self.flushAct(lvxid, prefix+sp+' '*max + " > " ,lv+1,mode,prnDone)
+						ret += self.flushAct(lvxid, prefix+sp+' '*max + " > " ,lv+1,mode,prnDone)
 				elif v['k'] == 'call':
 					#if mode == 'event':
-					#	ret = ret + self.printEvent(prefix,sp,max,v['k'],v['v'])
-					ret = ret + prefix + sp + "\n"
-					ret = ret + self.printBox(prefix,'>',"vcl_%s" % (v['v'].lower()))
+					#	ret += self.printEvent(prefix,sp,max,v['k'],v['v'])
+					ret += prefix + sp + "\n"
+					ret += self.printBox(prefix,'>',"vcl_%s" % (v['v'].lower()))
 				elif v['k'] == 'return':
 					if   mode == 'var':
-						ret = ret + prefix + sp + "\n"
-						ret = ret + self.printVar(vdi,prefix + sp)
+						ret += prefix + sp + "\n"
+						ret += self.printVar(vdi,prefix + sp)
 					else:
-						ret = ret + self.printEvent(prefix,sp,max,'','')
-						ret = ret + self.printEvent(prefix,sp,max,v['k'],v['v'])
-						ret = ret + prefix + sp + "\n"
-					#	ret = ret + self.printBox(prefix + ' '*3,'<',"return(%s)" % (v['v'].lower()))
-					#	ret = ret + prefix + sp + "\n"
+						ret += self.printEvent(prefix,sp,max,'','')
+						ret += self.printEvent(prefix,sp,max,v['k'],v['v'])
+						ret += prefix + sp + "\n"
+					#	ret += self.printBox(prefix + ' '*3,'<',"return(%s)" % (v['v'].lower()))
+					#	ret += prefix + sp + "\n"
 				elif mode == 'event':
-					ret = ret + self.printEvent(prefix,sp,max,v['k'],v['v'])
+					ret += self.printEvent(prefix,sp,max,v['k'],v['v'])
 
 		return ret
 			
 	def printBox(self,prefix,wrd,txt,rmode=0,sz=40):
 		ret = prefix + wrd*sz+"\n"
-		ret = ret + prefix + wrd + self.printCenter(sz-2,txt)+wrd+"\n"
+		ret += prefix + wrd + self.printCenter(sz-2,txt)+wrd+"\n"
 		if not rmode:
-			ret = ret + prefix + wrd*sz+"\n"
+			ret += prefix + wrd*sz+"\n"
 		return ret
 	
 	def flushAct(self,vxid,prefix,lv,mode,prnDone):
@@ -376,17 +376,17 @@ class im2CLI():
 			vdi = vd['act'][k]
 			retval = self.searchKey('return',vdi['work']['event'])
 			'''
-			ret = ret+ prefix + '#'*60+"\n"
-			ret = ret + prefix + '#' + self.printCenter(58,"vcl_%s / return(%s)" % (k.lower(),retval))+"#\n"
-			ret = ret + prefix + '#'*60+"\n"
+			ret += prefix + '#'*60+"\n"
+			ret += prefix + '#' + self.printCenter(58,"vcl_%s / return(%s)" % (k.lower(),retval))+"#\n"
+			ret += prefix + '#'*60+"\n"
 			'''
-			ret = ret + self.flushActEvent(vdi,prefix,lv,mode,prnDone)
+			ret += self.flushActEvent(vdi,prefix,lv,mode,prnDone)
 			if   mode == 'var':
-				#ret = ret + prefix + '<<Variable>>' + "\n"
-				#ret = ret + self.printVar(vdi,prefix)
+				#ret += prefix + '<<Variable>>' + "\n"
+				#ret += self.printVar(vdi,prefix)
 				pass
 			#elif mode == 'event':
-			#	ret = ret + prefix + '<<Event>>' + "\n"
+			#	ret += prefix + '<<Event>>' + "\n"
 		return ret
 	def printCenter(self,num,str):
 		l  = len(str)
