@@ -614,7 +614,7 @@ class vsl2chunk(v4filter):
 
 	def vapCallBack(self, vap, cbd, priv):
 		if not cbd['isbin']:
-			cbd['length'] = cbd['length'] -1;
+			cbd['length'] -= 1;
 			cbd['data']   = cbd['data'][:-1]
 			
 		ttag = vap.VSL_tags[cbd['tag']]
