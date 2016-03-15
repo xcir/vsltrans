@@ -398,18 +398,20 @@ class im2CLI():
 	def flush(self,vxid,rootVxid):
 		#val
 		prnDone = {}
-		print self.printBox('','*','Variable',0,60)
+		ret = ''
+		ret += self.printBox('','*','Variable',0,60)
 
-		print self.printBox('','#','Start',1),
-		print self.flushSess(rootVxid,1,'var',prnDone)
+		ret += self.printBox('','#','Start',1)
+		ret += self.flushSess(rootVxid,1,'var',prnDone)
 		#event
-		print "\n"
+		ret += "\n"
 		prnDone = {}
-		print self.printBox('','*','Event',0,60)
-		print self.printBox('','#','Start',1),
-		print self.flushSess(rootVxid,1,'event',prnDone)
-		print '-'*100
-		print "\n"
+		ret += self.printBox('','*','Event',0,60)
+		ret += self.printBox('','#','Start',1)
+		ret += self.flushSess(rootVxid,1,'event',prnDone)
+		ret += '-'*100
+		ret += "\n"
+		print ret
 		#flush
 		return prnDone
 	def searchKey(self,k,ar):
