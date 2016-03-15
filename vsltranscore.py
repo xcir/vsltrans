@@ -6,10 +6,10 @@ import threading,time,signal,copy,sys,re,os,time,binascii
 
 class log2vsl:
 	def __init__(self):
-		self.raw  = []
-		self.data = {}
-		self.parse = None
-		self.fmtversion = 4
+		self.__raw      = []
+		self.data       = {}
+		self.parse      = None
+		self.fmtversion = 0
 
 	def chkFmt(self):
 		re_session = re.compile(r"^\* +<< +Session +>>")
@@ -17,11 +17,15 @@ class log2vsl:
 		re_raw     = re.compile(r"^ *\d+ [A-Z]")
 		re_raw_v3  = re.compile(r"^ *\d+ (Rx|Tx)")
 		haslv = 0
-		for line in self.raw:
+
+		# default version
+		self.fmtversion = 4
+
+		for line in self.__raw:
 			if  re_raw.match(line):
 				self.parse = self.parseRaw
 				# version detect(3/4)
-				for l in self.raw:
+				for l in self.__raw:
 					if re_raw_v3.match(l):
 						self.fmtversion = 3
 						return
@@ -55,7 +59,7 @@ class log2vsl:
 		rh = re.compile(r"^[\*0-9]+ +<< +([^ ]+) +>> +(\d+) *$")
 		vxid  = 0
 		pvxid = 0
-		for line in self.raw:
+		for line in self.__raw:
 			m = r.match(line)
 			if not m:
 				m = rh.match(line)
@@ -76,7 +80,7 @@ class log2vsl:
 		rh = re.compile(r"^[\*0-9]+ +<< +([^ ]+) +>> +(\d+) *$")
 		vxid  = 0
 		pvxid = 0
-		for line in self.raw:
+		for line in self.__raw:
 			m = r.match(line)
 			if not m:
 				m = rh.match(line)
@@ -101,7 +105,7 @@ class log2vsl:
 		rh = re.compile(r"^\* +<< +([^ ]+) +>> +(\d+) *$")
 		vxid  = 0
 		pvxid = 0
-		for line in self.raw:
+		for line in self.__raw:
 			m = r.match(line)
 			if not m:
 				m = rh.match(line)
@@ -121,7 +125,7 @@ class log2vsl:
 		#    100073 Timestamp      c Process: 1435425931.782784 1.000796 0.000036
 		r = re.compile(r"^ *(\d+) ([^ ]+) +([^ ]) (.*)$")
 		pvxid=0
-		for line in self.raw:
+		for line in self.__raw:
 			m = r.match(line)
 			if not m:
 				continue
@@ -140,14 +144,14 @@ class log2vsl:
 			self.data[vxid].append({'ttag':ttag,'pvxid':pvxid,'cbd':{'level':1,'type':type,'reason':None,'vxid_parent':pvxid,'length':len(data),'tag':None,'vxid':vxid,'data':data,'isbin':0}})
 			
 	def read(self,file):
-		self.raw   = []
+		self.__raw   = []
 		self.parse = None
 		self.data  = {}
 		if not os.path.exists(file):
 			return 0
 		f = open(file)
 		for line in f.readlines():
-			self.raw.append(line)
+			self.__raw.append(line)
 		f.close()
 		self.chkFmt()
 		self.parse()
