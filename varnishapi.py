@@ -4,29 +4,29 @@
 # Copyright (c) 2013-2016 Shohei Tanaka(@xcir)
 # All rights reserved.
 #
-#Redistribution and use in source and binary forms, with or without
-#modification, are permitted provided that the following conditions
-#are met:
-#1. Redistributions of source code must retain the above copyright
-#   notice, this list of conditions and the following disclaimer.
-#2. Redistributions in binary form must reproduce the above copyright
-#   notice, this list of conditions and the following disclaimer in the
-#   documentation and/or other materials provided with the distribution.
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
 #
-#THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
-#ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-#IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-#ARE DISCLAIMED.  IN NO EVENT SHALL AUTHOR OR CONTRIBUTORS BE LIABLE
-#FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-#DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
-#OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-#HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-#LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-#OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
-#SUCH DAMAGE.
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
 
 # https://github.com/xcir/python-varnishapi
-# v0.9-varnish40
+# v0.10-varnish40
 
 from ctypes import *
 import getopt
@@ -437,13 +437,13 @@ class VarnishAPI:
             # Set Varnish instance name.
             i = self.lib.VSM_n_Arg(self.vsm, arg)
             if i <= 0:
-                error = "%s" % self.lib.VSM_Error(self.vsm).rstrip()
+                self.error = "%s" % self.lib.VSM_Error(self.vsm).rstrip()
                 return(i)
         elif op == "N":
             # Set VSM file.
             i = self.lib.VSM_N_Arg(self.vsm, arg)
             if i <= 0:
-                error = "%s" % self.lib.VSM_Error(self.vsm).rstrip()
+                self.error = "%s" % self.lib.VSM_Error(self.vsm).rstrip()
                 return(i)
             self.d_opt = 1
         return(None)
@@ -560,10 +560,10 @@ class VarnishLog(VarnishAPI):
             # Specify the grouping.
             self.__g_arg = self.__VSLQ_Name2Grouping(arg)
             if self.__g_arg == -2:
-                error = "Ambiguous grouping type: %s" % (arg)
+                self.error = "Ambiguous grouping type: %s" % (arg)
                 return(self.__g_arg)
             elif self.__g_arg < 0:
-                error = "Unknown grouping type: %s" % (arg)
+                self.error = "Unknown grouping type: %s" % (arg)
                 return(self.__g_arg)
         # elif op == "P":
         # Not support PID(-P) option.
@@ -577,7 +577,7 @@ class VarnishLog(VarnishAPI):
             # default
             i = self.__VSL_Arg(op, arg)
             if i < 0:
-                error = "%s" % self.lib.VSL_Error(self.vsl)
+                self.error = "%s" % self.lib.VSL_Error(self.vsl)
             return(i)
 
     def __Setup(self):
@@ -600,7 +600,6 @@ class VarnishLog(VarnishAPI):
 
         if not c:
             self.error = "Can't open log (%s)" % self.lva.VSL_Error(self.vsl)
-            print self.error
             return(0)
         # query
         z = cast(c, c_void_p)
