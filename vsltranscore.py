@@ -576,8 +576,6 @@ class log2chunk(util):
 			for data in v:
 				self.filter(data['ttag'],data['cbd'])
 		
-
-
 class vsl2chunk(util):
 	def __init__(self, opts, outcb):
 		self.mode = 'request'
@@ -586,13 +584,18 @@ class vsl2chunk(util):
 		self.source = 'vsl'
 
 		#一旦requestで、sessionも対応する
+		arg = {}
 		vops = ['-g',self.mode]
 		if isinstance(opts, list):
 			for o,a in opts:
 				if   o == '-q':
-					vops.append(o)
-					vops.append(a)
-		self.vap     = varnishapi.VarnishLog(vops)
+					vops += ['-q', a]
+				elif o == '--sopath':
+					arg["sopath"] = a
+				elif o == '-n':
+					vops += ['-n', a]
+		arg["opt"]   = vops
+		self.vap     = varnishapi.VarnishLog(**arg)
 		if self.vap.error:
 			print self.vap.error
 			exit(1)

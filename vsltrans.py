@@ -15,10 +15,10 @@ def main(opts):
 
 if __name__ == '__main__':
 	try:
-		opts,args = getopt.getopt(sys.argv[1:],"VP:q:f:")
+		opts,args = getopt.getopt(sys.argv[1:],"VP:q:f:n:", ["sopath="])
 	except getopt.GetoptError:
 		print 'invalid option'
-		print 'usage: vsltrans -f [logfile] -q [query] -V'
+		print 'usage: vsltrans -f [logfile] -q [query] --sopath [libvarnishapi.so] -n [instance-name] -V'
 		sys.exit(2)
 	
 	d_flag = False
