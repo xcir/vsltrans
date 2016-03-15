@@ -5,7 +5,7 @@ import vsltranscore,getopt,os,sys,syslog,traceback
 
 def main(opts):
 	try:
-		vhs = vsltranscore.vslTrans(opts)
+		vhs = vsltranscore.vslTrans4(opts)
 		vhs.execute()
 	except KeyboardInterrupt:
 		pass

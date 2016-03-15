@@ -146,7 +146,7 @@ class log2vsl:
 		self.chkFmt()
 		self.parse()
 
-class vslTrans:
+class vslTrans4:
 	def dataClear(self):
 		self.sess  = {}
 		self.vxid  = {}
