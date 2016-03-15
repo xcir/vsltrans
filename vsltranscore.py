@@ -9,16 +9,22 @@ class log2vsl:
 		self.raw  = []
 		self.data = {}
 		self.parse = None
+		self.fmtversion = 4
 
 	def chkFmt(self):
 		re_session = re.compile(r"^\* +<< +Session +>>")
 		re_request = re.compile(r"^--")
 		re_raw     = re.compile(r"^ *\d+ [A-Z]")
-		
+		re_raw_v3  = re.compile(r"^ *\d+ (Rx|Tx)")
 		haslv = 0
 		for line in self.raw:
 			if  re_raw.match(line):
 				self.parse = self.parseRaw
+				# version detect(3/4)
+				for l in self.raw:
+					if re_raw_v3.match(l):
+						self.fmtversion = 3
+						return
 				return
 			elif '<<' in line:
 				if re_session.match(line) and haslv:
