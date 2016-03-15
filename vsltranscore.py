@@ -4,7 +4,7 @@ import varnishapi
 import threading,time,signal,copy,sys,re,os,time,binascii
 
 
-class util:
+class v4filter:
 	def dataClear(self):
 		self.sess  = {}
 		self.vxid  = {}
@@ -412,7 +412,7 @@ class im2CLI():
 				return v['v']
 		return ''
 
-class log2chunk(util):
+class log2chunk(v4filter):
 	def __init__(self,opts,outcb):
 		self.__raw      = []
 		self.data       = {}
@@ -424,7 +424,7 @@ class log2chunk(util):
 				if o == '-f':
 					self.source = 'file'
 					self.fname  = a
-		util.__init__(self,opts, varnishapi.VSLUtil(),outcb)
+		v4filter.__init__(self,opts, varnishapi.VSLUtil(),outcb)
 
 	def chkFmt(self):
 		re_session = re.compile(r"^\* +<< +Session +>>")
@@ -576,7 +576,7 @@ class log2chunk(util):
 			for data in v:
 				self.filter(data['ttag'],data['cbd'])
 		
-class vsl2chunk(util):
+class vsl2chunk(v4filter):
 	def __init__(self, opts, outcb):
 		self.mode = 'request'
 		#self.mode = 'session'
@@ -599,7 +599,7 @@ class vsl2chunk(util):
 		if self.vap.error:
 			print self.vap.error
 			exit(1)
-		util.__init__(self,opts,self.vap.vut,outcb)
+		v4filter.__init__(self,opts,self.vap.vut,outcb)
 	
 	def execute(self):
 		while 1:
