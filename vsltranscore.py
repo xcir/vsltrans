@@ -155,6 +155,7 @@ class log2vsl:
 		f.close()
 		self.chkFmt()
 		self.parse()
+		del self.__raw
 
 class vslTrans4:
 	def dataClear(self):
