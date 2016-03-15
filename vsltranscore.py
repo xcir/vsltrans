@@ -100,7 +100,7 @@ class v4filter:
 		return 0
 	
 	def getRootVXID(self,vxid):
-		if self.sess[vxid][0] == None:
+		if self.sess[vxid][0] is None:
 			return vxid
 		return self.getRootVXID(self.sess[vxid][0])
 	
@@ -108,7 +108,7 @@ class v4filter:
 		if not vxid in self.sess:
 			return 0
 		sesslen = len(self.sess[vxid])
-		if sesslen == 1 or self.sess[vxid][-1] != None:
+		if sesslen == 1 or self.sess[vxid][-1] is not None:
 			return 0
 		elif sesslen == 2:
 			return 1
@@ -249,7 +249,7 @@ class im2CLI():
 					retv[kk] = {'init':'','work':'','fini':''}
 				tmp = []
 				for vvv in vv:
-					if vvv == None:
+					if vvv is None:
 						tmp.append('[unset]')
 					else:
 						tmp.append("'%s'" % vvv)
