@@ -9,16 +9,12 @@ class util:
 		self.sess  = {}
 		self.vxid  = {}
 
-	def __init__(self, opts, vut):
+	def __init__(self, opts, vut,outcb):
 		self.vut = vut
+		self.outcb = outcb
 		#self.debug = 1
 		self.debug = 0
 		self.dataClear()
-		self.__transWrd = {
-			'init':'Before vcl funciton',
-			'work':'In vcl function',
-			'fini':'After vcl function',
-		}
 		self.__filter = {
 			'ReqURL':		[self.fExistVXID, self.fRequest],
 			'ReqStart':		[self.fExistVXID, self.fRequest],
@@ -61,7 +57,6 @@ class util:
 
 			'Timestamp':	[self.fExistVXID, self.fTimestamp],
 			'__default':	[self.fExistVXID, self.fEventStor],
-
 		}
 	def filter(self,ttag,cbd):
 		vxid = cbd['vxid']
@@ -91,23 +86,158 @@ class util:
 		act = vd['act']['temp'][vd['actstat']]
 		act['event'].append({'k':k,'v':v})
 
-	def searchKey(self,k,ar):
-		for v in ar:
-			if v['k'] == k:
-				return v['v']
-		return ''
 
+	def rmData(self,prnDone):
+		for vxid in prnDone.values():
+			del self.sess[vxid]
+			del self.vxid[vxid]
+
+
+	########################################################################
+	def fExistVXID(self, ttag, vxid, cbd):
+		if vxid in self.sess:
+			return 1
+		return 0
+	
+	def getRootVXID(self,vxid):
+		if self.sess[vxid][0] == None:
+			return vxid
+		return self.getRootVXID(self.sess[vxid][0])
+	
+	def __chkEndSess(self,vxid):
+		if not vxid in self.sess:
+			return 0
+		sesslen = len(self.sess[vxid])
+		if sesslen == 1 or self.sess[vxid][-1] != None:
+			return 0
+		elif sesslen == 2:
+			return 1
+		
+		for v in self.sess[vxid][1:-1]:
+			if self.__chkEndSess(v) == 0:
+				return 0
+		return 1
+
+	def chkEndSess(self,vxid):
+		vxidr = self.getRootVXID(vxid)
+		return self.__chkEndSess(vxidr)
+		
+		
+	########################################################################
+	def fTimestamp(self, ttag, vxid, cbd):
+		vd = self.vxid[vxid]
+		spl  = cbd['data'].split(':',1);
+		spl2 = spl[1].split(' ',3)
+		vd['timestamp'].append({'k':spl[0],'abs':spl2[1],'offset':spl2[3]})
+		spl3 = vd['timestamp'][-1]['abs'].split('.',2)
+		
+		val = spl[0] + ': '+time.strftime('%Y/%m/%d %H:%M:%S.', time.gmtime(int(spl3[0]))) + spl3[1] + ' GMT (last +' + vd['timestamp'][-1]['offset']+'s)'
+		self.appendEvent(vxid,ttag,val)
+		return 1
+	
+	def fEnd(self, ttag, vxid, cbd):
+		#vxid flush
+		vd = self.vxid[vxid]
+		ak = vd['actidx'][-1]
+		vd['act'][ak]['fini'] = copy.deepcopy(vd['act']['temp']['init'])
+		vd['act']['temp']['fini'] = {'var':{},'event':[]}
+		
+		
+		ss = self.sess[vxid]
+		ss.append(None)
+		if self.chkEndSess(vxid):
+			#Flush Data
+			self.rmData(self.outcb(self.sess,self.vxid,vxid,self.getRootVXID(vxid)))
+			
+			#self.flush(vxid)
+		return 1
+	
+	#初期化する
+	def fBegin(self, ttag, vxid, cbd):
+		vxidp = cbd['vxid_parent']
+		#Start Session or Request
+		if vxidp == 0:
+			self.sess[vxid] = [None]
+		else:
+			self.sess[vxid] = [vxidp]
+		self.vxid[vxid] = {'actidx':[], 'act':{},'actcur':'initial','actstat':'init','timestamp':[]}
+		self.vxid[vxid]['act']['temp']    = {'init':{'var':{},'event':[]},'work':{'var':{},'event':[]},'fini':{'var':{},'event':[]}}
+		return 1
+		
+	def fLink(self, ttag, vxid, cbd):
+		self.appendEvent(vxid,'Link',cbd['data'])
+		#{'level': 1L, 'type': 'c', 'reason': 4, 'vxid_parent': 98889, 'length': 16L, 'tag': 73L, 'vxid': 98891, 'data': 'bereq 98892 pass', 'isbin': 0L}
+		ss = self.sess[vxid]
+		spl   = cbd['data'].split(' ', 2)
+		ss.append(int(spl[1]))
+		return 1
+		
+	def fVCLCall(self, ttag, vxid, cbd):
+		self.appendEvent(vxid,'call',cbd['data'])
+		
+		vd = self.vxid[vxid]
+		vd['actstat'] = 'work'
+		vd['actcur']  = cbd['data']
+		
+		return 1
+		
+	def fVCLReturn(self, ttag, vxid, cbd):
+		#todo:わざわざ名前変えるか再検討(vcl_returnに戻す？VCL表記に合わす？）
+		if ttag == 'VCL_return':
+			ttag = 'return'
+		self.appendEvent(vxid,ttag,cbd['data'])
+
+
+		vd = self.vxid[vxid]
+		vd['act'][vd['actcur']] = copy.deepcopy(vd['act']['temp'])
+		vd['act']['temp'] = {'init':{'var':{},'event':[]},'work':{'var':{},'event':[]},'fini':{'var':{},'event':[]}}
+		vd['actidx'].append(vd['actcur'])
+		vd['actcur']  = None
+		vd['actstat'] = 'init'
+		return 1
+
+	def fRequest(self, ttag, vxid, cbd):
+		#{'level': 2L, 'type': 'c', 'reason': 2, 'vxid_parent': 1, 'length': 37L, 'tag': 27L, 'vxid': 2, 'data': 'X-Powered-By: PHP/5.3.10-1ubuntu3.13\x00', 'isbin': 0L}
+
+		var  = self.vut.tag2Var(ttag,cbd['data'])
+		vkey = var['vkey']
+		spl   = var['key'].split(' ')
+		vn    = spl[-1]
+		if spl[0] != 'unset':
+			self.appendVar(vxid,vn,var['val'])
+		else:
+			self.appendVar(vxid,vn,None)
+		return 1
+
+	def fEventStor(self, ttag, vxid, cbd):
+		#default stor 
+		if cbd['isbin']:
+			self.appendEvent(vxid,ttag,"(0x%s) %s" % (binascii.hexlify(cbd['data']),cbd['data']))
+		else:
+			self.appendEvent(vxid,ttag,cbd['data'])
+		return 1
+
+class im2CLI():
+	def __init__(self):
+		self.__transWrd = {
+			'init':'Before vcl funciton',
+			'work':'In vcl function',
+			'fini':'After vcl function',
+		}
+
+	def getData(self,sessar,vxidar,vxid,rootVxid):
+		self.sess = sessar
+		self.vxid = vxidar
+		return self.flush(vxid,rootVxid)
+		#		self.rmData(prnDone)
 		
 	def flushSess(self,vxid,lv,mode,prnDone):
-		
 		if vxid not in prnDone:
 			print self.flushAct(vxid,'',lv,mode,prnDone),
 			prnDone[vxid] = vxid
 		for v in self.sess[vxid][1:-1]:
 			self.flushSess(v,lv+1,mode,prnDone)
-	
-
-		
+			
 	def rebuildVar(self,vdi,minsize):
 		#key=varName
 		retv  = {}
@@ -252,12 +382,6 @@ class util:
 			#elif mode == 'event':
 			#	ret = ret + prefix + '<<Event>>' + "\n"
 		return ret
-
-	def rmData(self,prnDone):
-		for vxid in prnDone.values():
-			del self.sess[vxid]
-			del self.vxid[vxid]
-			
 	def printCenter(self,num,str):
 		l  = len(str)
 		ll = (num - l)/2
@@ -265,160 +389,42 @@ class util:
 		
 		return (' '*ll + str + ' '*rr)
 		
-	def flush(self,vxid):
+	def flush(self,vxid,rootVxid):
 		#val
 		prnDone = {}
 		print self.printBox('','*','Variable',0,60)
 
 		print self.printBox('','#','Start',1),
-		self.flushSess(self.getRootVXID(vxid),1,'var',prnDone)
+		self.flushSess(rootVxid,1,'var',prnDone)
 		#event
 		print "\n"
 		prnDone = {}
 		print self.printBox('','*','Event',0,60)
 		print self.printBox('','#','Start',1),
-		self.flushSess(self.getRootVXID(vxid),1,'event',prnDone)
+		self.flushSess(rootVxid,1,'event',prnDone)
 		print '-'*100
 		print "\n"
 		#flush
-		self.rmData(prnDone)
-	
-	########################################################################
-	def fExistVXID(self, ttag, vxid, cbd):
-		if vxid in self.sess:
-			return 1
-		return 0
-	
-	def getRootVXID(self,vxid):
-		if self.sess[vxid][0] == None:
-			return vxid
-		return self.getRootVXID(self.sess[vxid][0])
-	
-	def __chkEndSess(self,vxid):
-		if not vxid in self.sess:
-			return 0
-		sesslen = len(self.sess[vxid])
-		if sesslen == 1 or self.sess[vxid][-1] != None:
-			return 0
-		elif sesslen == 2:
-			return 1
-		
-		for v in self.sess[vxid][1:-1]:
-			if self.__chkEndSess(v) == 0:
-				return 0
-		return 1
-
-	def chkEndSess(self,vxid):
-		vxidr = self.getRootVXID(vxid)
-		return self.__chkEndSess(vxidr)
-		
-		
-	########################################################################
-	def fTimestamp(self, ttag, vxid, cbd):
-		vd = self.vxid[vxid]
-		spl  = cbd['data'].split(':',1);
-		spl2 = spl[1].split(' ',3)
-		vd['timestamp'].append({'k':spl[0],'abs':spl2[1],'offset':spl2[3]})
-		spl3 = vd['timestamp'][-1]['abs'].split('.',2)
-		
-		val = spl[0] + ': '+time.strftime('%Y/%m/%d %H:%M:%S.', time.gmtime(int(spl3[0]))) + spl3[1] + ' GMT (last +' + vd['timestamp'][-1]['offset']+'s)'
-		self.appendEvent(vxid,ttag,val)
-		return 1
-	
-	def fEnd(self, ttag, vxid, cbd):
-		#vxid flush
-		vd = self.vxid[vxid]
-		ak = vd['actidx'][-1]
-		vd['act'][ak]['fini'] = copy.deepcopy(vd['act']['temp']['init'])
-		vd['act']['temp']['fini'] = {'var':{},'event':[]}
-		
-		
-		ss = self.sess[vxid]
-		ss.append(None)
-		if self.chkEndSess(vxid):
-			#Flush Data
-			self.flush(vxid)
-		return 1
-	
-	#初期化する
-	def fBegin(self, ttag, vxid, cbd):
-		vxidp = cbd['vxid_parent']
-		#Start Session or Request
-		if vxidp == 0:
-			self.sess[vxid] = [None]
-		else:
-			self.sess[vxid] = [vxidp]
-		self.vxid[vxid] = {'actidx':[], 'act':{},'actcur':'initial','actstat':'init','timestamp':[]}
-		self.vxid[vxid]['act']['temp']    = {'init':{'var':{},'event':[]},'work':{'var':{},'event':[]},'fini':{'var':{},'event':[]}}
-		return 1
-		
-	def fLink(self, ttag, vxid, cbd):
-		self.appendEvent(vxid,'Link',cbd['data'])
-		#{'level': 1L, 'type': 'c', 'reason': 4, 'vxid_parent': 98889, 'length': 16L, 'tag': 73L, 'vxid': 98891, 'data': 'bereq 98892 pass', 'isbin': 0L}
-		ss = self.sess[vxid]
-		spl   = cbd['data'].split(' ', 2)
-		ss.append(int(spl[1]))
-		return 1
-		
-	def fVCLCall(self, ttag, vxid, cbd):
-		self.appendEvent(vxid,'call',cbd['data'])
-		
-		vd = self.vxid[vxid]
-		vd['actstat'] = 'work'
-		vd['actcur']  = cbd['data']
-		
-		return 1
-		
-	def fVCLReturn(self, ttag, vxid, cbd):
-		#todo:わざわざ名前変えるか再検討(vcl_returnに戻す？VCL表記に合わす？）
-		if ttag == 'VCL_return':
-			ttag = 'return'
-		self.appendEvent(vxid,ttag,cbd['data'])
-
-
-		vd = self.vxid[vxid]
-		vd['act'][vd['actcur']] = copy.deepcopy(vd['act']['temp'])
-		vd['act']['temp'] = {'init':{'var':{},'event':[]},'work':{'var':{},'event':[]},'fini':{'var':{},'event':[]}}
-		vd['actidx'].append(vd['actcur'])
-		vd['actcur']  = None
-		vd['actstat'] = 'init'
-		return 1
-
-	def fRequest(self, ttag, vxid, cbd):
-		#{'level': 2L, 'type': 'c', 'reason': 2, 'vxid_parent': 1, 'length': 37L, 'tag': 27L, 'vxid': 2, 'data': 'X-Powered-By: PHP/5.3.10-1ubuntu3.13\x00', 'isbin': 0L}
-
-		var  = self.vut.tag2Var(ttag,cbd['data'])
-		vkey = var['vkey']
-		spl   = var['key'].split(' ')
-		vn    = spl[-1]
-		if spl[0] != 'unset':
-			self.appendVar(vxid,vn,var['val'])
-		else:
-			self.appendVar(vxid,vn,None)
-		return 1
-
-	def fEventStor(self, ttag, vxid, cbd):
-		#default stor 
-		if cbd['isbin']:
-			self.appendEvent(vxid,ttag,"(0x%s) %s" % (binascii.hexlify(cbd['data']),cbd['data']))
-		else:
-			self.appendEvent(vxid,ttag,cbd['data'])
-		return 1
+		return prnDone
+	def searchKey(self,k,ar):
+		for v in ar:
+			if v['k'] == k:
+				return v['v']
+		return ''
 
 class log2chunk(util):
-	def __init__(self,opts):
+	def __init__(self,opts,outcb):
 		self.__raw      = []
 		self.data       = {}
 		self.parse      = None
 		self.fmtversion = 0
 		self.fname      = ''
-		
 		if isinstance(opts, list):
 			for o,a in opts:
 				if o == '-f':
 					self.source = 'file'
 					self.fname  = a
-		util.__init__(self,opts, varnishapi.VSLUtil())
+		util.__init__(self,opts, varnishapi.VSLUtil(),outcb)
 
 	def chkFmt(self):
 		re_session = re.compile(r"^\* +<< +Session +>>")
@@ -571,30 +577,14 @@ class log2chunk(util):
 				self.filter(data['ttag'],data['cbd'])
 		
 
-class vslTrans4:
-	def __init__(self, opts):
-		self.source = 'vsl'
-		if isinstance(opts, list):
-			for o,a in opts:
-				if o == '-f':
-					self.source = 'file'
-					self.idrv   = log2chunk(opts)
-		if self.source == 'vsl':
-			self.idrv = vsl2chunk(opts)
-			
-	def execute(self):
-		self.idrv.execute()
 
-
-		
 class vsl2chunk(util):
-
-	def __init__(self, opts):
+	def __init__(self, opts, outcb):
 		self.mode = 'request'
 		#self.mode = 'session'
 		
 		self.source = 'vsl'
-		
+
 		#一旦requestで、sessionも対応する
 		vops = ['-g',self.mode]
 		if isinstance(opts, list):
@@ -606,12 +596,11 @@ class vsl2chunk(util):
 		if self.vap.error:
 			print self.vap.error
 			exit(1)
-		util.__init__(self,opts,self.vap.vut)
+		util.__init__(self,opts,self.vap.vut,outcb)
 	
 	def execute(self):
 		while 1:
 			#dispatch
-			#self.state = 0
 			ret = self.vap.Dispatch(self.vapCallBack)
 			if 0 == ret:
 				time.sleep(0.1)
@@ -625,7 +614,24 @@ class vsl2chunk(util):
 		self.filter(ttag,cbd)
 	
 
-	
+
+class vslTrans4:
+	def __init__(self, opts):
+		self.odrv = im2CLI()
+		self.source = 'vsl'
+		if isinstance(opts, list):
+			for o,a in opts:
+				if o == '-f':
+					self.source = 'file'
+					self.idrv   = log2chunk(opts,self.odrv.getData)
+		if self.source == 'vsl':
+			self.idrv = vsl2chunk(opts,self.odrv.getData)
+			
+	def execute(self):
+		self.idrv.execute()
+	def outcb(self,str):
+		print str
+
 '''
 todo:
 サマリ表示をいれるかどうか考えとく
