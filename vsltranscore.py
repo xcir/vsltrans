@@ -1,7 +1,7 @@
 # coding: utf-8
 import varnishapi
 
-import threading,time,signal,copy,sys,re,os,time,binascii
+import threading,time,signal,copy,sys,re,os,time,binascii,json
 
 
 class v4filter:
@@ -221,7 +221,28 @@ class v4filter:
             self.appendEvent(vxid,ttag,cbd['data'])
         return 1
 
-
+class im2JSON():
+    def __init__(self):
+        pass
+    def getAllSess(self, ret, vxid):
+        for v in self.sess[vxid]:
+            if v is not None and v != vxid and v not in ret:
+                 ret[v] = v
+                 self.getAllSess(ret,v)
+                 
+    def getData(self,sessar,vxidar,vxid,rootVxid):
+        self.sess = sessar
+        self.vxid = vxidar
+        sr = {}
+        self.getAllSess(sr,rootVxid)
+        ret = {"rootVxid": rootVxid,"sess":{},"vxid":{}}
+        for v in sr:
+            ret["sess"][v] = self.sess[v]
+            ret["vxid"][v] = self.vxid[v]
+        print json.dumps(ret)
+        return sr
+        
+    
 class im2CLI():
     def __init__(self):
         self.__transWrd = {
@@ -629,15 +650,20 @@ class vsl2chunk(v4filter):
 
 class vslTrans4:
     def __init__(self, opts):
-        self.odrv = im2CLI()
         self.source = 'vsl'
+        self.odrv   = None
         if isinstance(opts, list):
             for o,a in opts:
                 if o == '-f':
                     self.source = 'file'
-                    self.idrv   = log2chunk(opts,self.odrv.getData)
+                elif o == '-j':
+                    self.odrv = im2JSON()
+        if self.odrv is None:
+            self.odrv = im2CLI()
         if self.source == 'vsl':
             self.idrv = vsl2chunk(opts,self.odrv.getData)
+        else:
+            self.idrv   = log2chunk(opts,self.odrv.getData)
             
     def execute(self):
         self.idrv.execute()
