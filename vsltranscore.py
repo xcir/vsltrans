@@ -239,6 +239,7 @@ class im2JSON():
         for v in sr:
             ret["sess"][v] = self.sess[v]
             ret["vxid"][v] = self.vxid[v]
+            del ret["vxid"][v]['act']['temp']
         print json.dumps(ret)
         return sr
         
