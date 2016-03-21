@@ -8,8 +8,8 @@ Re-format tool for vsl(varnishlog)
 -----------------------------------
 
 :Author: Shohei Tanaka(@xcir)
-:Date: 2015-12-13
-:Version: 0.4-varnish40
+:Date: 2016-03-21
+:Version: 0.5-varnish40
 :Support Varnish Version: 4.0.x
 :Manual section: 1
 
@@ -24,6 +24,12 @@ DESCRIPTION
 ===========
 Re-format tool for vsl(varnishlog)
 
+OPTION
+===========
+::
+
+  -q [VSL-Query] -f [file-name] --sopath [libvarnishapi.so] -n [instance-name] -j
+
 HOW TO USE
 ===========
 
@@ -33,12 +39,14 @@ Read from log-file(raw/vxid/request/session)
 
   ./vsltrans.py -f test.log
 
+
 Using VSL Query Expressions
 --------------------------------------------
 ::
 
   # Does not support the VSL-Query, if read from log-file.
   ./vsltrans.py -q "requrl ~ '^/test'"
+
 
 OUTPUT SAMPLE
 ===============
@@ -945,6 +953,8 @@ Re-formatted log(./vsltrans.py)
 
 HISTORY
 ===========
+
+Version 0.5-varnish40: Support -n --sopath -j option. Not require varnishapi in read from file.
 
 Version 0.4-varnish40: Support Varnish4.1.x, Fix Crash if log abandoned.
 
