@@ -234,7 +234,9 @@ class im2JSON():
         self.sess = sessar
         self.vxid = vxidar
         sr = {}
-        self.getAllSess(sr,rootVxid)
+        self.getAllSess(sr, rootVxid)
+        if len(sr) == 0:
+            sr = {rootVxid:rootVxid}
         ret = {"rootVxid": rootVxid,"sess":{},"vxid":{}}
         for v in sr:
             ret["sess"][v] = self.sess[v]
