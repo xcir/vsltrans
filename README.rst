@@ -10,7 +10,7 @@ Re-format tool for vsl(varnishlog)
 :Author: Shohei Tanaka(@xcir)
 :Date: 2016-03-21
 :Version: 0.5-varnish40
-:Support Varnish Version: 4.0.x
+:Support Varnish Version: 4.1.x, 4.0.x
 :Manual section: 1
 
 For Varnish3.0.x
