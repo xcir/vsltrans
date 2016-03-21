@@ -104,6 +104,8 @@ class v4filter:
         return 0
     
     def getRootVXID(self,vxid):
+        if vxid not in self.sess:
+            return None
         if self.sess[vxid][0] is None:
             return vxid
         return self.getRootVXID(self.sess[vxid][0])
@@ -124,6 +126,9 @@ class v4filter:
 
     def chkEndSess(self,vxid):
         vxidr = self.getRootVXID(vxid)
+        if vxid is None:
+            #incomplete data
+            return 1
         return self.__chkEndSess(vxidr)
         
         
