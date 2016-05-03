@@ -789,7 +789,7 @@ class log2chunk(v4filter):
             return 0
         f = open(self.fname)
         for line in f.readlines():
-            self.__raw.append(line.rstrip())
+            self.__raw.append(line.rstrip("\r\n"))
         f.close()
         self.chkFmt()
         self.parse()
