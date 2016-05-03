@@ -958,7 +958,7 @@ Re-formatted log(./vsltrans.py -f samplelog)
 Re-formatted log(./vsltrans.py -f samplelog -d | dot -Tsvg > samplelog.svg)
 ---------------------------------------------------
 
-.. image:: samplelog.png
+.. image:: sample.png
 
 
 HISTORY
