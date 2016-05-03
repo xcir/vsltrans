@@ -1,7 +1,7 @@
 # coding: utf-8
 import varnishapi
 
-import threading,time,signal,copy,sys,re,os,time,binascii,json
+import threading,time,signal,copy,sys,re,os,time,binascii,json,hashlib
 
 
 class v4filter:
@@ -226,9 +226,155 @@ class v4filter:
             self.appendEvent(vxid,ttag,cbd['data'])
         return 1
 
-class im2JSON():
+class im2DOT():
     def __init__(self):
-        pass
+        self.kx = ['init', 'work', 'fini']
+    def getAllSess(self, ret, vxid):
+        for v in self.sess[vxid]:
+            if v is not None and v != vxid and v not in ret:
+                 ret[v] = v
+                 self.getAllSess(ret,v)
+    def prnHeader(self):
+        ret = \
+'''
+digraph G {
+  node [
+    shape = record,
+    fontsize = 9,
+  ];
+  graph [
+    rankdir = TB,
+  ];
+%s
+}
+''' % (self.dot)
+       
+        return ret
+    def add(self,txt,ind=1):
+        self.dot += '  ' * ind + txt
+    def getHash(self,txt):
+        return hashlib.sha256(txt).hexdigest()
+    def gen(self):
+        #client ip
+        clip = self.vxid[self.rootVxid]['act']['RECV']['init']['var']['client.ip'][0];
+        self.add("Client%d [shape = oval, label = \"client\l%s\"];\n" % (self.rootVxid, clip))
+        self.add("Client%d -> VCL_start_%d [dir = both];\n" %(self.rootVxid, self.rootVxid))
+        
+        #external link(ex:Storage, Backend Link)
+        ext    = {'storage':{},'backend':{}}
+        extlnk = {'storage':[],'backend':[]}
+        
+        for vxid, v in self.vxid.items():
+            sg = \
+"""subgraph cluster_vxid_%d {
+    label = "vxid: %d";
+labeljust = "l";
+""" % (vxid, vxid)
+            act = ''
+            curact = 0
+            actidx = v['actidx']
+            retidx = {}
+            lnk    = []
+            client = 0
+            if 'RECV' in v['act']:
+                client = 1
+            if client:
+                if 'req.http.Host' in v['act']['RECV']['init']['var']:
+                    host = v['act']['RECV']['init']['var']['req.http.Host'][0]
+                url = v['act']['RECV']['init']['var']['req.url'][0]
+            else:
+                if 'bereq.http.Host' in v['act']['BACKEND_FETCH']['init']['var']:
+                    host = v['act']['BACKEND_FETCH']['init']['var']['bereq.http.Host'][0]
+                url = v['act']['BACKEND_FETCH']['init']['var']['bereq.url'][0]
+            for action,vv in v['act'].items():
+                i = 0
+                tmp = "  VCL_%s_%d [label = \"{<head>%s|" % (action, vxid, action)
+                #search for init,work,fini
+                for key in self.kx:
+                    for vvv in vv[key]['event']:
+                        i+=1
+                        vkey = vvv['k']
+                        vval = vvv['v']
+                        if   vkey == 'return':
+                            retidx[action] = i
+                        elif vkey == 'Link':
+                            lnk.append([action, i, int(vval.split(' ')[1])])
+                        elif vkey == 'call':
+                            vkey = 'Execute'
+                            vval = "vcl_" + vval.lower()
+                        elif vkey == 'Storage':
+                            print self.getHash(vval)
+                            ext['storage'][self.getHash(vval)] = vval
+                            extlnk['storage'].append([action, vxid, i, vval])
+                        elif vkey == 'BackendOpen':
+                            spl = vval.split(' ')
+                            del spl[-2:]
+                            vt = ' '.join(spl)
+                            ext['backend'][self.getHash(vval)] = vt
+                            extlnk['backend'].append([action, vxid, i, vt])
+                            
+                        tmp+="<%d>%s:\l%s\l|" % (i, vkey, vval.replace('"',"'"))
+                tmp.rstrip('|')
+                tmp += "}}}}\"];\n"
+                sg += tmp
+                
+            act += "VCL_start_%d -> VCL_%s_%d:head\n" % (vxid, actidx[0], vxid)
+            actidx.append('start')
+            i=0
+            for action in actidx:
+                ri = retidx[action]
+                if i+1 not in actidx:
+                    break
+                act+="VCL_%s_%d:%d -> VCL_%s_%d:head\n" % (action, vxid, ri, actidx[i+1], vxid)
+                i+=1
+            lt = ''
+            for l in lnk:
+                lt += "VCL_%s_%d:%d -> VCL_start_%d [dir = both];\n" % (l[0], vxid, l[1], l[2])
+            self.add("VCL_start_%d [label=\"host: %s\lurl: %s\l\", style=filled];\n" % (vxid, host, url))
+            self.add(sg)
+            self.add(act)
+            self.add("};\n")
+            self.add(lt)
+        exs = ''
+        for k,v in ext.items():
+            if not v:
+                continue
+            exs += \
+'''
+subgraph cluster_%s {
+    label = "%s";
+    labeljust = "l";
+''' % (k,k)
+            print v
+            for l in v.values():
+                print 'xxx',
+                print l
+                exs += "%s_%s [label = \"%s\"];\n" % (k,self.getHash(l),l)
+            exs += "}\n"
+            for l in extlnk[k]:
+                print l[3]
+                print "VCL_%s_%d:%d -> %s_%s\n" % (l[0],l[1],l[2],k,self.getHash(l[3]))
+                exs += "VCL_%s_%d:%d -> %s_%s\n" % (l[0],l[1],l[2],k,self.getHash(l[3]))
+        self.add(exs)
+                            
+    def getData(self,sessar,vxidar,vxid,rootVxid):
+        self.dot      = ''
+        self.sess     = sessar
+        self.vxid     = vxidar
+        self.rootVxid = rootVxid
+        sr = {}
+        self.getAllSess(sr, rootVxid)
+        if len(sr) == 0:
+            return ''
+        
+        self.gen()
+        print self.prnHeader()
+        return sr
+
+class im2JSON():
+    def __init__(self,f_dot):
+        self.f_dot = f_dot
+
     def getAllSess(self, ret, vxid):
         for v in self.sess[vxid]:
             if v is not None and v != vxid and v not in ret:
@@ -660,14 +806,20 @@ class vslTrans4:
     def __init__(self, opts):
         self.source = 'vsl'
         self.odrv   = None
+        f_dot = 0
         if isinstance(opts, list):
             for o,a in opts:
                 if o == '-f':
                     self.source = 'file'
                 elif o == '-j':
-                    self.odrv = im2JSON()
+                    self.odrv = im2JSON(f_dot)
+                elif o == '-d':
+                    f_dot = 1
         if self.odrv is None:
-            self.odrv = im2CLI()
+            if f_dot:
+                self.odrv = im2DOT()
+            else:
+                self.odrv = im2CLI()
         if self.source == 'vsl':
             self.idrv = vsl2chunk(opts,self.odrv.getData)
         else:
