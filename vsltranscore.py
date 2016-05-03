@@ -319,13 +319,10 @@ labeljust = "l";
                 
             act += "VCL_start_%d -> VCL_%s_%d:head\n" % (vxid, actidx[0], vxid)
             actidx.append('start')
-            i=0
-            for action in actidx:
+            for i in range(0, len(actidx) -2):
+                action = actidx[i]
                 ri = retidx[action]
-                if i+1 not in actidx:
-                    break
                 act+="VCL_%s_%d:%d -> VCL_%s_%d:head\n" % (action, vxid, ri, actidx[i+1], vxid)
-                i+=1
             lt = ''
             for l in lnk:
                 lt += "VCL_%s_%d:%d -> VCL_start_%d [dir = both];\n" % (l[0], vxid, l[1], l[2])
