@@ -53,6 +53,13 @@ Output DOT format
 
   ./vsltrans.py -d
 
+Output JSON format
+---------------------------------------------
+::
+
+  #This option dump the internal data.
+  ./vsltrans.py -j
+
 OUTPUT SAMPLE
 ===============
 

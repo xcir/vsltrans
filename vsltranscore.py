@@ -255,7 +255,7 @@ digraph graph_%d {
         self.dot += '  ' * ind + txt
     def getHash(self,txt):
         return hashlib.sha256(txt).hexdigest()
-    def gen(self):
+    def __genDOT(self):
         #client ip
         clip = ''
         if 'RECV' in self.vxid[self.rootVxid]['act']:
@@ -370,23 +370,27 @@ subgraph cluster_%s {
             for l in extlnk[k]:
                 exs += "VCL_%s_%d:%d -> %s_%s\n" % (l[0],l[1],l[2],k,self.getHash(l[3]))
         self.add(exs)
-                            
-    def getData(self,sessar,vxidar,vxid,rootVxid):
+    def genDOT(self,sessar,vxidar,vxid,rootVxid):
         self.dot      = ''
         self.sess     = sessar
         self.vxid     = vxidar
         self.rootVxid = rootVxid
+        self.__genDOT()
+        return self.prnHeader()
+    
+    def getData(self,sessar,vxidar,vxid,rootVxid):
+        print self.genDOT(sessar,vxidar,vxid,rootVxid)
         sr = {}
         self.getAllSess(sr, rootVxid)
         if len(sr) == 0:
             sr = {rootVxid:rootVxid}
-        self.gen()
-        print self.prnHeader()
         return sr
 
 class im2JSON():
     def __init__(self,f_dot):
         self.f_dot = f_dot
+        if f_dot:
+            self.im2dot = im2DOT()
 
     def getAllSess(self, ret, vxid):
         for v in self.sess[vxid]:
@@ -406,6 +410,8 @@ class im2JSON():
             ret["sess"][v] = self.sess[v]
             ret["vxid"][v] = self.vxid[v]
             del ret["vxid"][v]['act']['temp']
+        if self.f_dot:
+            ret["dot"] = self.im2dot.genDOT(sessar,vxidar,vxid,rootVxid)
         print json.dumps(ret)
         return sr
         
