@@ -249,7 +249,7 @@ digraph graph_%d {
 }
 ''' % (self.rootVxid,self.dot)
        
-        return ret
+        return ret.replace("\n"," ")
     def add(self,txt,ind=1):
         self.dot += '  ' * ind + txt
     def getHash(self,txt):
@@ -276,6 +276,8 @@ labeljust = "l";
             retidx = {}
             lnk    = []
             client = 0
+            if 'temp' in v['act']:
+                del v['act']['temp']
             if 'RECV' in v['act']:
                 client = 1
             if client:
