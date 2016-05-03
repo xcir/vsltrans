@@ -249,7 +249,7 @@ digraph graph_%d {
 }
 ''' % (self.rootVxid,self.dot)
        
-        return ret.replace("\n"," ")
+        return ret#.replace("\n"," ")
     def add(self,txt,ind=1):
         self.dot += '  ' * ind + txt
     def getHash(self,txt):
@@ -307,24 +307,30 @@ labeljust = "l";
                         elif vkey == 'Storage':
                             ext['storage'][self.getHash(vval)] = vval
                             extlnk['storage'].append([action, vxid, i, vval])
-                        elif vkey == 'BackendOpen':
-                            spl = vval.split(' ')
-                            del spl[-2:]
-                            vt = ' '.join(spl)
-                            ext['backend'][self.getHash(vval)] = vt
-                            extlnk['backend'].append([action, vxid, i, vt])
+                        #ちょっとBackendで線を引くかBackendOpenで引くか迷い中
+                        elif vkey == 'Backend':
+                            ext['backend'][self.getHash(vval)] = vval
+                            extlnk['backend'].append([action, vxid, i, vval])
+                        #elif vkey == 'BackendOpen':
+                        #    spl = vval.split(' ')
+                        #    del spl[-2:]
+                        #    vt = ' '.join(spl)
+                        #    ext['backend'][self.getHash(vval)] = vt
+                        #    extlnk['backend'].append([action, vxid, i, vt])
                             
                         tmp+="<%d>%s:\l%s\l|" % (i, vkey, vval.replace('"',"'"))
-                tmp.rstrip('|')
-                tmp += "}}}}\"];\n"
+                tmp = tmp.rstrip('|') + "}}}}\"];\n"
                 sg += tmp
                 
             act += "VCL_start_%d -> VCL_%s_%d:head\n" % (vxid, actidx[0], vxid)
             actidx.append('start')
-            for i in range(0, len(actidx) -2):
+            for i in range(0, len(actidx) -1):
                 action = actidx[i]
                 ri = retidx[action]
-                act+="VCL_%s_%d:%d -> VCL_%s_%d:head\n" % (action, vxid, ri, actidx[i+1], vxid)
+                port = ''
+                if actidx[i+1] != 'start':
+                    port=':head'
+                act+="VCL_%s_%d:%d -> VCL_%s_%d%s\n" % (action, vxid, ri, actidx[i+1], vxid,port)
             lt = ''
             for l in lnk:
                 lt += "VCL_%s_%d:%d -> VCL_start_%d [dir = both];\n" % (l[0], vxid, l[1], l[2])
