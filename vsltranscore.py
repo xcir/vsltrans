@@ -321,16 +321,28 @@ labeljust = "l";
                         elif vkey == 'Storage':
                             ext['storage'][self.getHash(vval)] = vval
                             extlnk['storage'].append([action, vxid, i, vval])
-                        #ちょっとBackendで線を引くかBackendOpenで引くか迷い中
+                        elif vkey == 'BackendOpen':
+                            spl = vval.split(' ')
+                            del spl[-2:]
+                            vt = ' '.join(spl)
+                            ext['backend'][self.getHash(vval)] = vt
+                            extlnk['backend'].append([action, vxid, i, vt])
                         elif vkey == 'Backend':
-                            ext['backend'][self.getHash(vval)] = vval
-                            extlnk['backend'].append([action, vxid, i, vval])
-                        #elif vkey == 'BackendOpen':
-                        #    spl = vval.split(' ')
-                        #    del spl[-2:]
-                        #    vt = ' '.join(spl)
-                        #    ext['backend'][self.getHash(vval)] = vt
-                        #    extlnk['backend'].append([action, vxid, i, vt])
+                            spl = vval.split(' ')
+                            del spl[1]
+                            vt = ' '.join(spl)
+                        
+                            if len(extlnk['backend']) >0:
+                                el=extlnk['backend'][-1]
+                                if not(el[3].split(' ')[0] == vval.split(' ')[0] and
+                                   el[0] == action and
+                                   el[1] == vxid):
+                                    ext['backend'][self.getHash(vval)] = vt
+                                    extlnk['backend'].append([action, vxid, i, vt])
+                                
+                            else:
+                                ext['backend'][self.getHash(vval)] = vt
+                                extlnk['backend'].append([action, vxid, i, vt])
                             
                         tmp+="<%d>%s:\l%s\l|" % (i, vkey, vval.replace('"',"'"))
                 tmp = tmp.rstrip('|') + "}}}}\"];\n"
