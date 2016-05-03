@@ -303,7 +303,6 @@ labeljust = "l";
                             vkey = 'Execute'
                             vval = "vcl_" + vval.lower()
                         elif vkey == 'Storage':
-                            print self.getHash(vval)
                             ext['storage'][self.getHash(vval)] = vval
                             extlnk['storage'].append([action, vxid, i, vval])
                         elif vkey == 'BackendOpen':
@@ -345,15 +344,10 @@ subgraph cluster_%s {
     label = "%s";
     labeljust = "l";
 ''' % (k,k)
-            print v
             for l in v.values():
-                print 'xxx',
-                print l
                 exs += "%s_%s [label = \"%s\"];\n" % (k,self.getHash(l),l)
             exs += "}\n"
             for l in extlnk[k]:
-                print l[3]
-                print "VCL_%s_%d:%d -> %s_%s\n" % (l[0],l[1],l[2],k,self.getHash(l[3]))
                 exs += "VCL_%s_%d:%d -> %s_%s\n" % (l[0],l[1],l[2],k,self.getHash(l[3]))
         self.add(exs)
                             
@@ -365,8 +359,7 @@ subgraph cluster_%s {
         sr = {}
         self.getAllSess(sr, rootVxid)
         if len(sr) == 0:
-            return ''
-        
+            sr = {rootVxid:rootVxid}
         self.gen()
         print self.prnHeader()
         return sr
