@@ -670,7 +670,7 @@ class log2chunk(v4filter):
                     continue
                 vxid = int(m.group(2))
                 continue
-            ttag = m.group(1).rstrip()
+            ttag = m.group(1)
             if ttag == 'Begin':
                 pvxid = int(data.split(' ',3)[1])
             if vxid not in self.data:
@@ -696,7 +696,7 @@ class log2chunk(v4filter):
                     continue
                 vxid = int(m.group(2))
                 continue
-            ttag = m.group(1).rstrip()
+            ttag = m.group(1)
             if ttag == 'Begin':
                 spl = data.split(' ',3)
                 if spl[0]=='req' and spl[2]=='rxreq':
@@ -726,7 +726,7 @@ class log2chunk(v4filter):
                     continue
                 vxid = int(m.group(2))
                 continue
-            ttag = m.group(1).rstrip()
+            ttag = m.group(1)
             if ttag == 'Begin':
                 pvxid = int(data.split(' ',3)[1])
             if vxid not in self.data:
@@ -751,7 +751,7 @@ class log2chunk(v4filter):
             if vxid==0:
                 #CLI
                 continue
-            ttag = m.group(2).rstrip()
+            ttag = m.group(2)
             type = m.group(3)
             if ttag == 'Begin':
                 pvxid = int(data.split(' ',3)[1])
@@ -768,7 +768,7 @@ class log2chunk(v4filter):
             return 0
         f = open(self.fname)
         for line in f.readlines():
-            self.__raw.append(line)
+            self.__raw.append(line.rstrip())
         f.close()
         self.chkFmt()
         self.parse()
