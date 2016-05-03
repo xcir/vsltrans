@@ -28,7 +28,7 @@ OPTION
 ===========
 ::
 
-  -q [VSL-Query] -f [file-name] --sopath [libvarnishapi.so] -n [instance-name] -j
+  -q [VSL-Query] -f [file-name] --sopath [libvarnishapi.so] -n [instance-name] -j -d
 
 HOW TO USE
 ===========
@@ -47,6 +47,11 @@ Using VSL Query Expressions
   # Does not support the VSL-Query, if read from log-file.
   ./vsltrans.py -q "requrl ~ '^/test'"
 
+Output DOT format
+---------------------------------------------
+::
+
+  ./vsltrans.py -d
 
 OUTPUT SAMPLE
 ===============
@@ -380,7 +385,7 @@ Original log
   
 
 
-Re-formatted log(./vsltrans.py)
+Re-formatted log(./vsltrans.py -f samplelog)
 ---------------------------------------------------
 ::
 
@@ -949,6 +954,11 @@ Re-formatted log(./vsltrans.py)
      |   ESI_BodyBytes | 227
      |         ReqAcct | 123 0 123 378 283 661
   ----------------------------------------------------------------------------------------------------
+
+Re-formatted log(./vsltrans.py -f samplelog -d | dot -Tsvg > samplelog.svg)
+---------------------------------------------------
+
+.. image:: samplelog.png
 
 
 HISTORY
