@@ -249,7 +249,7 @@ digraph graph_%d {
 }
 ''' % (self.rootVxid,self.dot)
        
-        return ret#.replace("\n"," ")
+        return ret.replace("\n"," ")
     def add(self,txt,ind=1):
         self.dot += '  ' * ind + txt
     def getHash(self,txt):
@@ -628,7 +628,7 @@ class log2chunk(v4filter):
                         return
                 return
             elif '<<' in line:
-                if re_session.match(line) and haslv:
+                if re_session.match(line):
                     self.parse = self.parseSession
                     return
             elif re_request.match(line):
