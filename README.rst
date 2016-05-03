@@ -8,8 +8,8 @@ Re-format tool for vsl(varnishlog)
 -----------------------------------
 
 :Author: Shohei Tanaka(@xcir)
-:Date: 2016-03-21
-:Version: 0.5-varnish40
+:Date: 2016-05-04
+:Version: 0.6-varnish40
 :Support Varnish Version: 4.1.x, 4.0.x
 :Manual section: 1
 
@@ -970,6 +970,8 @@ Re-formatted log(./vsltrans.py -f samplelog -d | dot -Tsvg > samplelog.svg)
 
 HISTORY
 ===========
+
+Version 0.6-varnish40: Support -d option. Enhance log detect.
 
 Version 0.5-varnish40: Support -n --sopath -j option. Not require varnishapi in read from file.
 
