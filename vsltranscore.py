@@ -653,19 +653,24 @@ class log2chunk(v4filter):
         #Debug  {'level': 1L, 'type': 'c', 'reason': 2, 'vxid_parent': 0, 'length': 12L, 'tag': 1L, 'vxid': 34485, 'data': 'RES_MODE 18\x00', 'isbin': 2L}
     def parseSession(self):
         r  = re.compile(r"^[-0-9]+ +([^ ]+) +(.*)$")
+        r2  = re.compile(r"^[-0-9]+ +([^ ]+)$")
         rh = re.compile(r"^[\*0-9]+ +<< +([^ ]+) +>> +(\d+) *$")
         vxid  = 0
         pvxid = 0
         for line in self.__raw:
             m = r.match(line)
+            data = ''
+            if not m:
+                m = r2.match(line)
+            else:
+                data = m.group(2)
             if not m:
                 m = rh.match(line)
                 if not m:
                     continue
                 vxid = int(m.group(2))
                 continue
-            ttag = m.group(1)
-            data = m.group(2)
+            ttag = m.group(1).rstrip()
             if ttag == 'Begin':
                 pvxid = int(data.split(' ',3)[1])
             if vxid not in self.data:
@@ -674,19 +679,24 @@ class log2chunk(v4filter):
             
     def parseRequest(self):
         r  = re.compile(r"^[-0-9]+ +([^ ]+) +(.*)$")
+        r2  = re.compile(r"^[-0-9]+ +([^ ]+)$")
         rh = re.compile(r"^[\*0-9]+ +<< +([^ ]+) +>> +(\d+) *$")
         vxid  = 0
         pvxid = 0
         for line in self.__raw:
             m = r.match(line)
+            data = ''
+            if not m:
+                m = r2.match(line)
+            else:
+                data = m.group(2)
             if not m:
                 m = rh.match(line)
                 if not m:
                     continue
                 vxid = int(m.group(2))
                 continue
-            ttag = m.group(1)
-            data = m.group(2)
+            ttag = m.group(1).rstrip()
             if ttag == 'Begin':
                 spl = data.split(' ',3)
                 if spl[0]=='req' and spl[2]=='rxreq':
@@ -699,19 +709,24 @@ class log2chunk(v4filter):
 
     def parseVXID(self):
         r  = re.compile(r"^- +([^ ]+) +(.*)$")
+        r2  = re.compile(r"^- +([^ ]+)$")
         rh = re.compile(r"^\* +<< +([^ ]+) +>> +(\d+) *$")
         vxid  = 0
         pvxid = 0
         for line in self.__raw:
             m = r.match(line)
+            data = ''
+            if not m:
+                m = r2.match(line)
+            else:
+                data = m.group(2)
             if not m:
                 m = rh.match(line)
                 if not m:
                     continue
                 vxid = int(m.group(2))
                 continue
-            ttag = m.group(1)
-            data = m.group(2)
+            ttag = m.group(1).rstrip()
             if ttag == 'Begin':
                 pvxid = int(data.split(' ',3)[1])
             if vxid not in self.data:
@@ -721,18 +736,23 @@ class log2chunk(v4filter):
     def parseRaw(self):
         #    100073 Timestamp      c Process: 1435425931.782784 1.000796 0.000036
         r = re.compile(r"^ *(\d+) ([^ ]+) +([^ ]) (.*)$")
+        r2 = re.compile(r"^ *(\d+) ([^ ]+) +([^ ])$")
         pvxid=0
         for line in self.__raw:
             m = r.match(line)
+            data = ''
+            if not m:
+                m = r2.match(line)
+            else:
+                data = m.group(4)
             if not m:
                 continue
             vxid = int(m.group(1))
             if vxid==0:
                 #CLI
                 continue
-            ttag = m.group(2)
+            ttag = m.group(2).rstrip()
             type = m.group(3)
-            data = m.group(4)
             if ttag == 'Begin':
                 pvxid = int(data.split(' ',3)[1])
             
