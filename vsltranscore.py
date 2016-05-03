@@ -237,7 +237,7 @@ class im2DOT():
     def prnHeader(self):
         ret = \
 '''
-digraph G {
+digraph graph_%d {
   node [
     shape = record,
     fontsize = 9,
@@ -247,7 +247,7 @@ digraph G {
   ];
 %s
 }
-''' % (self.dot)
+''' % (self.rootVxid,self.dot)
        
         return ret
     def add(self,txt,ind=1):
