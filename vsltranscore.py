@@ -65,6 +65,7 @@ class v4filter:
     def filter(self,ttag,cbd):
         vxid = cbd['vxid']
         key = ttag
+
         if key not in self.__filter:
             key = '__default'
             if self.debug:
@@ -256,14 +257,18 @@ digraph graph_%d {
         return hashlib.sha256(txt).hexdigest()
     def gen(self):
         #client ip
-        clip = self.vxid[self.rootVxid]['act']['RECV']['init']['var']['client.ip'][0];
+        clip = ''
+        if 'RECV' in self.vxid[self.rootVxid]['act']:
+            clip = self.vxid[self.rootVxid]['act']['RECV']['init']['var']['client.ip'][0];
+        elif 'initial' in self.vxid[self.rootVxid]['act']:
+            #session data. check to next vxid
+            clip = self.vxid[self.sess[self.rootVxid][1]]['act']['RECV']['init']['var']['client.ip'][0];
         self.add("Client%d [shape = oval, label = \"client\l%s\"];\n" % (self.rootVxid, clip))
         self.add("Client%d -> VCL_start_%d [dir = both];\n" %(self.rootVxid, self.rootVxid))
         
         #external link(ex:Storage, Backend Link)
         ext    = {'storage':{},'backend':{}}
         extlnk = {'storage':[],'backend':[]}
-        
         for vxid, v in self.vxid.items():
             sg = \
 """subgraph cluster_vxid_%d {
@@ -276,18 +281,27 @@ labeljust = "l";
             retidx = {}
             lnk    = []
             client = 0
+            backend= 0
+            host = ''
+            url  = ''
+            
             if 'temp' in v['act']:
                 del v['act']['temp']
             if 'RECV' in v['act']:
                 client = 1
+            elif 'BACKEND_FETCH' in v['act']:
+                backend = 1
             if client:
                 if 'req.http.Host' in v['act']['RECV']['init']['var']:
                     host = v['act']['RECV']['init']['var']['req.http.Host'][0]
-                url = v['act']['RECV']['init']['var']['req.url'][0]
-            else:
+                if 'req.url' in v['act']['RECV']['init']['var']:
+                    url = v['act']['RECV']['init']['var']['req.url'][0]
+                
+            elif backend:
                 if 'bereq.http.Host' in v['act']['BACKEND_FETCH']['init']['var']:
                     host = v['act']['BACKEND_FETCH']['init']['var']['bereq.http.Host'][0]
-                url = v['act']['BACKEND_FETCH']['init']['var']['bereq.url'][0]
+                if 'bereq.url' in v['act']['BACKEND_FETCH']['init']['var']:
+                    url = v['act']['BACKEND_FETCH']['init']['var']['bereq.url'][0]
             for action,vv in v['act'].items():
                 i = 0
                 tmp = "  VCL_%s_%d [label = \"{<head>%s|" % (action, vxid, action)
@@ -324,13 +338,14 @@ labeljust = "l";
                 
             act += "VCL_start_%d -> VCL_%s_%d:head\n" % (vxid, actidx[0], vxid)
             actidx.append('start')
-            for i in range(0, len(actidx) -1):
-                action = actidx[i]
-                ri = retidx[action]
-                port = ''
-                if actidx[i+1] != 'start':
-                    port=':head'
-                act+="VCL_%s_%d:%d -> VCL_%s_%d%s\n" % (action, vxid, ri, actidx[i+1], vxid,port)
+            if retidx:
+                for i in range(0, len(actidx) -1):
+                    action = actidx[i]
+                    ri = retidx[action]
+                    port = ''
+                    if actidx[i+1] != 'start':
+                        port=':head'
+                    act+="VCL_%s_%d:%d -> VCL_%s_%d%s\n" % (action, vxid, ri, actidx[i+1], vxid,port)
             lt = ''
             for l in lnk:
                 lt += "VCL_%s_%d:%d -> VCL_start_%d [dir = both];\n" % (l[0], vxid, l[1], l[2])
