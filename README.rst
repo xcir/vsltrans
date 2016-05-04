@@ -63,13 +63,13 @@ Output JSON format
 OUTPUT SAMPLE
 ===============
 
-Re-formatted log(./vsltrans.py -f samplelog -d | tail -n1 | dot -Tpng > samplelog.png)
+./vsltrans.py -f samplelog -d | tail -n1 | dot -Tpng > samplelog.png
 ---------------------------------------------------
 
 .. image:: sample.png
 
 
-Re-formatted log(./vsltrans.py -f samplelog)
+./vsltrans.py -f samplelog
 ---------------------------------------------------
 ::
 
