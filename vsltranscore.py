@@ -270,37 +270,43 @@ digraph graph_%d {
         #external link(ex:Storage, Backend Link)
         ext    = {'storage':{},'backend':{}}
         extlnk = {'storage':[],'backend':[]}
-        for vxid, v in self.vxid.items():
+        for vxid in self.sr.keys():
+            v = self.vxid[vxid]
             act = ''
             curact = 0
             actidx = v['actidx']
             retidx = {}
             lnk    = []
-            client = 0
-            backend= 0
+            session = 1
             host = ''
             url  = ''
             begin= ['','','']
             if 'temp' in v['act']:
                 del v['act']['temp']
             if 'RECV' in v['act']:
-                client = 1
-            elif 'BACKEND_FETCH' in v['act']:
-                backend = 1
-            if client:
                 if 'req.http.Host' in v['act']['RECV']['init']['var']:
                     host = v['act']['RECV']['init']['var']['req.http.Host'][0]
                 if 'req.url' in v['act']['RECV']['init']['var']:
                     url = v['act']['RECV']['init']['var']['req.url'][0]
                 if v['act']['RECV']['init']['event'][0]['k'] == 'Begin':
                     begin = v['act']['RECV']['init']['event'][0]['v'].split(' ')
-            elif backend:
+                session = 0
+            elif 'BACKEND_FETCH' in v['act']:
                 if 'bereq.http.Host' in v['act']['BACKEND_FETCH']['init']['var']:
                     host = v['act']['BACKEND_FETCH']['init']['var']['bereq.http.Host'][0]
                 if 'bereq.url' in v['act']['BACKEND_FETCH']['init']['var']:
                     url = v['act']['BACKEND_FETCH']['init']['var']['bereq.url'][0]
                 if v['act']['BACKEND_FETCH']['init']['event'][0]['k'] == 'Begin':
                     begin = v['act']['BACKEND_FETCH']['init']['event'][0]['v'].split(' ')
+                session = 0
+            elif 'PIPE' in v['act']:
+                if 'bereq.http.Host' in v['act']['PIPE']['init']['var']:
+                    host = v['act']['PIPE']['init']['var']['bereq.http.Host'][0]
+                if 'bereq.url' in v['act']['PIPE']['init']['var']:
+                    url = v['act']['PIPE']['init']['var']['bereq.url'][0]
+                if v['act']['PIPE']['init']['event'][0]['k'] == 'Begin':
+                    begin = v['act']['PIPE']['init']['event'][0]['v'].split(' ')
+                session = 0
             else:
                 if v['act']['initial']['init']['event'][0]['k'] == 'Begin':
                     begin = v['act']['initial']['init']['event'][0]['v'].split(' ')
@@ -357,7 +363,8 @@ labelloc = "t";
                 sg += tmp
                 
             act += "VCL_start_%d -> VCL_%s_%d:head\n" % (vxid, actidx[0], vxid)
-            actidx.append('start')
+            if actidx[-1] != 'start':
+                actidx.append('start')
             if retidx:
                 for i in range(0, len(actidx) -1):
                     action = actidx[i]
@@ -369,7 +376,7 @@ labelloc = "t";
             lt = ''
             for l in lnk:
                 lt += "VCL_%s_%d:%d -> VCL_start_%d [dir = both];\n" % (l[0], vxid, l[1], l[2])
-            if not client and not backend:
+            if session:
                 self.add("VCL_start_%d [label=\"Session\", style=filled];\n" % (vxid))
             else:
                 self.add("VCL_start_%d [label=\"host: %s\lurl: %s\l\", style=filled];\n" % (vxid, host, url))
@@ -398,16 +405,16 @@ subgraph cluster_%s {
         self.sess     = sessar
         self.vxid     = vxidar
         self.rootVxid = rootVxid
+        self.sr       = {}
+        self.getAllSess(self.sr, rootVxid)
+        if len(self.sr) == 0:
+            self.sr = {rootVxid:rootVxid}
         self.__genDOT()
         return self.prnHeader()
     
     def getData(self,sessar,vxidar,vxid,rootVxid):
         print self.genDOT(sessar,vxidar,vxid,rootVxid)
-        sr = {}
-        self.getAllSess(sr, rootVxid)
-        if len(sr) == 0:
-            sr = {rootVxid:rootVxid}
-        return sr
+        return self.sr
 
 class im2JSON():
     def __init__(self,f_dot):
