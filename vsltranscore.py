@@ -369,7 +369,10 @@ labelloc = "t";
             lt = ''
             for l in lnk:
                 lt += "VCL_%s_%d:%d -> VCL_start_%d [dir = both];\n" % (l[0], vxid, l[1], l[2])
-            self.add("VCL_start_%d [label=\"host: %s\lurl: %s\l\", style=filled];\n" % (vxid, host, url))
+            if not client and not backend:
+                self.add("VCL_start_%d [label=\"Session\", style=filled];\n" % (vxid))
+            else:
+                self.add("VCL_start_%d [label=\"host: %s\lurl: %s\l\", style=filled];\n" % (vxid, host, url))
             self.add(sg)
             self.add(act)
             self.add("};\n")
