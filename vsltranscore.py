@@ -172,6 +172,7 @@ class v4filter:
             self.sess[vxid] = [vxidp]
         self.vxid[vxid] = {'actidx':[], 'act':{},'actcur':'initial','actstat':'init','timestamp':[]}
         self.vxid[vxid]['act']['temp']    = {'init':{'var':{},'event':[]},'work':{'var':{},'event':[]},'fini':{'var':{},'event':[]}}
+        self.appendEvent(vxid,ttag,cbd['data'])
         return 1
         
     def fLink(self, ttag, vxid, cbd):
@@ -270,11 +271,6 @@ digraph graph_%d {
         ext    = {'storage':{},'backend':{}}
         extlnk = {'storage':[],'backend':[]}
         for vxid, v in self.vxid.items():
-            sg = \
-"""subgraph cluster_vxid_%d {
-    label = "vxid: %d";
-labeljust = "l";
-""" % (vxid, vxid)
             act = ''
             curact = 0
             actidx = v['actidx']
@@ -284,7 +280,7 @@ labeljust = "l";
             backend= 0
             host = ''
             url  = ''
-            
+            begin= ['','','']
             if 'temp' in v['act']:
                 del v['act']['temp']
             if 'RECV' in v['act']:
@@ -296,12 +292,23 @@ labeljust = "l";
                     host = v['act']['RECV']['init']['var']['req.http.Host'][0]
                 if 'req.url' in v['act']['RECV']['init']['var']:
                     url = v['act']['RECV']['init']['var']['req.url'][0]
-                
+                if v['act']['RECV']['init']['event'][0]['k'] == 'Begin':
+                    begin = v['act']['RECV']['init']['event'][0]['v'].split(' ')
             elif backend:
                 if 'bereq.http.Host' in v['act']['BACKEND_FETCH']['init']['var']:
                     host = v['act']['BACKEND_FETCH']['init']['var']['bereq.http.Host'][0]
                 if 'bereq.url' in v['act']['BACKEND_FETCH']['init']['var']:
                     url = v['act']['BACKEND_FETCH']['init']['var']['bereq.url'][0]
+                if v['act']['BACKEND_FETCH']['init']['event'][0]['k'] == 'Begin':
+                    begin = v['act']['BACKEND_FETCH']['init']['event'][0]['v'].split(' ')
+            else:
+                if v['act']['initial']['init']['event'][0]['k'] == 'Begin':
+                    begin = v['act']['initial']['init']['event'][0]['v'].split(' ')
+            sg = \
+"""subgraph cluster_vxid_%d {
+    label = "VXID: %d TYPE:%s\\nPARENT: %s REASON:%s";
+labelloc = "t";
+""" % (vxid, vxid,begin[0],begin[1],begin[2])
             for action,vv in v['act'].items():
                 i = 0
                 tmp = "  VCL_%s_%d [label = \"{<head>%s|" % (action, vxid, action)
