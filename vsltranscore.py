@@ -287,7 +287,11 @@ digraph graph_%d {
                 if 'req.http.Host' in v['act']['RECV']['init']['var']:
                     host = v['act']['RECV']['init']['var']['req.http.Host'][0]
                 if 'req.url' in v['act']['RECV']['init']['var']:
-                    url = v['act']['RECV']['init']['var']['req.url'][0]
+                    url = "%s %s %s" % (
+                        v['act']['RECV']['init']['var']['req.method'][0],
+                        v['act']['RECV']['init']['var']['req.url'][0],
+                        v['act']['RECV']['init']['var']['req.proto'][0]
+                        )
                 if v['act']['RECV']['init']['event'][0]['k'] == 'Begin':
                     begin = v['act']['RECV']['init']['event'][0]['v'].split(' ')
                 session = 0
@@ -295,7 +299,11 @@ digraph graph_%d {
                 if 'bereq.http.Host' in v['act']['BACKEND_FETCH']['init']['var']:
                     host = v['act']['BACKEND_FETCH']['init']['var']['bereq.http.Host'][0]
                 if 'bereq.url' in v['act']['BACKEND_FETCH']['init']['var']:
-                    url = v['act']['BACKEND_FETCH']['init']['var']['bereq.url'][0]
+                    url = "%s %s %s" % (
+                        v['act']['BACKEND_FETCH']['init']['var']['bereq.method'][0],
+                        v['act']['BACKEND_FETCH']['init']['var']['bereq.url'][0],
+                        v['act']['BACKEND_FETCH']['init']['var']['bereq.proto'][0]
+                        )
                 if v['act']['BACKEND_FETCH']['init']['event'][0]['k'] == 'Begin':
                     begin = v['act']['BACKEND_FETCH']['init']['event'][0]['v'].split(' ')
                 session = 0
@@ -303,7 +311,11 @@ digraph graph_%d {
                 if 'bereq.http.Host' in v['act']['PIPE']['init']['var']:
                     host = v['act']['PIPE']['init']['var']['bereq.http.Host'][0]
                 if 'bereq.url' in v['act']['PIPE']['init']['var']:
-                    url = v['act']['PIPE']['init']['var']['bereq.url'][0]
+                    url = "%s %s %s" % (
+                        v['act']['BACKEND_FETCH']['init']['var']['bereq.method'][0],
+                        v['act']['BACKEND_FETCH']['init']['var']['bereq.url'][0],
+                        v['act']['BACKEND_FETCH']['init']['var']['bereq.proto'][0]
+                        )
                 if v['act']['PIPE']['init']['event'][0]['k'] == 'Begin':
                     begin = v['act']['PIPE']['init']['event'][0]['v'].split(' ')
                 session = 0
@@ -379,7 +391,7 @@ labelloc = "t";
             if session:
                 self.add("VCL_start_%d [label=\"Session\", style=filled];\n" % (vxid))
             else:
-                self.add("VCL_start_%d [label=\"host: %s\lurl: %s\l\", style=filled];\n" % (vxid, host, url))
+                self.add("VCL_start_%d [label=\"%s\lhost: %s\l\", style=filled];\n" % (vxid, url, host))
             self.add(sg)
             self.add(act)
             self.add("};\n")
