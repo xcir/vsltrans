@@ -347,7 +347,7 @@ labelloc = "t";
                             ext['storage'][self.getHash(vval)] = vval
                             extlnk['storage'].append([action, vxid, i, vval])
                         elif vkey == 'BackendOpen':
-                            spl = vval.split(' ')
+                            spl = vval.split(' ', 3)
                             del spl[-2:]
                             vt = ' '.join(spl)
                             ext['backend'][self.getHash(vval)] = vt
@@ -356,7 +356,6 @@ labelloc = "t";
                             spl = vval.split(' ')
                             del spl[1]
                             vt = ' '.join(spl)
-                        
                             if len(extlnk['backend']) >0:
                                 el=extlnk['backend'][-1]
                                 if not(
