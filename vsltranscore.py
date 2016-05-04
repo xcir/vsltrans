@@ -334,9 +334,10 @@ labeljust = "l";
                         
                             if len(extlnk['backend']) >0:
                                 el=extlnk['backend'][-1]
-                                if not(el[3].split(' ')[0] == vval.split(' ')[0] and
+                                if not(
                                    el[0] == action and
-                                   el[1] == vxid):
+                                   el[1] == vxid and
+                                   el[3] == vt):
                                     ext['backend'][self.getHash(vval)] = vt
                                     extlnk['backend'].append([action, vxid, i, vt])
                                 
