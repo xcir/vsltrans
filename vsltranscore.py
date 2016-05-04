@@ -1,7 +1,7 @@
 # coding: utf-8
 import varnishapi
 
-import threading,time,signal,copy,sys,re,os,time,binascii,json
+import threading,time,signal,copy,sys,re,os,time,binascii,json,hashlib
 
 
 class v4filter:
@@ -65,6 +65,7 @@ class v4filter:
     def filter(self,ttag,cbd):
         vxid = cbd['vxid']
         key = ttag
+
         if key not in self.__filter:
             key = '__default'
             if self.debug:
@@ -171,6 +172,7 @@ class v4filter:
             self.sess[vxid] = [vxidp]
         self.vxid[vxid] = {'actidx':[], 'act':{},'actcur':'initial','actstat':'init','timestamp':[]}
         self.vxid[vxid]['act']['temp']    = {'init':{'var':{},'event':[]},'work':{'var':{},'event':[]},'fini':{'var':{},'event':[]}}
+        self.appendEvent(vxid,ttag,cbd['data'])
         return 1
         
     def fLink(self, ttag, vxid, cbd):
@@ -226,9 +228,212 @@ class v4filter:
             self.appendEvent(vxid,ttag,cbd['data'])
         return 1
 
-class im2JSON():
+class im2DOT():
     def __init__(self):
-        pass
+        self.kx = ['init', 'work', 'fini']
+    def getAllSess(self, ret, vxid):
+        for v in self.sess[vxid]:
+            if v is not None and v != vxid and v not in ret:
+                 ret[v] = v
+                 self.getAllSess(ret,v)
+    def prnHeader(self):
+        ret = \
+'''
+digraph graph_%d {
+  node [
+    shape = record,
+    fontsize = 9,
+  ];
+  graph [
+    rankdir = TB,
+  ];
+%s
+}
+''' % (self.rootVxid,self.dot)
+       
+        return ret.replace("\n"," ")
+    def add(self,txt,ind=1):
+        self.dot += '  ' * ind + txt
+    def getHash(self,txt):
+        return hashlib.sha256(txt).hexdigest()
+    def __genDOT(self):
+        #client ip
+        clip = ''
+        if 'RECV' in self.vxid[self.rootVxid]['act']:
+            clip = self.vxid[self.rootVxid]['act']['RECV']['init']['var']['client.ip'][0];
+        elif 'initial' in self.vxid[self.rootVxid]['act']:
+            #session data. check to next vxid
+            clip = self.vxid[self.sess[self.rootVxid][1]]['act']['RECV']['init']['var']['client.ip'][0];
+        self.add("Client%d [shape = oval, label = \"client\l%s\"];\n" % (self.rootVxid, clip))
+        self.add("Client%d -> VCL_start_%d [dir = both];\n" %(self.rootVxid, self.rootVxid))
+        
+        #external link(ex:Storage, Backend Link)
+        ext    = {'storage':{},'backend':{}}
+        extlnk = {'storage':[],'backend':[]}
+        for vxid in self.sr.keys():
+            v = self.vxid[vxid]
+            act = ''
+            curact = 0
+            actidx = v['actidx']
+            retidx = {}
+            lnk    = []
+            session = 1
+            host = ''
+            url  = ''
+            begin= ['','','']
+            if 'temp' in v['act']:
+                del v['act']['temp']
+            if 'RECV' in v['act']:
+                if 'req.http.Host' in v['act']['RECV']['init']['var']:
+                    host = v['act']['RECV']['init']['var']['req.http.Host'][0]
+                if 'req.url' in v['act']['RECV']['init']['var']:
+                    url = "%s %s %s" % (
+                        v['act']['RECV']['init']['var']['req.method'][0],
+                        v['act']['RECV']['init']['var']['req.url'][0],
+                        v['act']['RECV']['init']['var']['req.proto'][0]
+                        )
+                if v['act']['RECV']['init']['event'][0]['k'] == 'Begin':
+                    begin = v['act']['RECV']['init']['event'][0]['v'].split(' ')
+                session = 0
+            elif 'BACKEND_FETCH' in v['act']:
+                if 'bereq.http.Host' in v['act']['BACKEND_FETCH']['init']['var']:
+                    host = v['act']['BACKEND_FETCH']['init']['var']['bereq.http.Host'][0]
+                if 'bereq.url' in v['act']['BACKEND_FETCH']['init']['var']:
+                    url = "%s %s %s" % (
+                        v['act']['BACKEND_FETCH']['init']['var']['bereq.method'][0],
+                        v['act']['BACKEND_FETCH']['init']['var']['bereq.url'][0],
+                        v['act']['BACKEND_FETCH']['init']['var']['bereq.proto'][0]
+                        )
+                if v['act']['BACKEND_FETCH']['init']['event'][0]['k'] == 'Begin':
+                    begin = v['act']['BACKEND_FETCH']['init']['event'][0]['v'].split(' ')
+                session = 0
+            elif 'PIPE' in v['act']:
+                if 'bereq.http.Host' in v['act']['PIPE']['init']['var']:
+                    host = v['act']['PIPE']['init']['var']['bereq.http.Host'][0]
+                if 'bereq.url' in v['act']['PIPE']['init']['var']:
+                    url = "%s %s %s" % (
+                        v['act']['BACKEND_FETCH']['init']['var']['bereq.method'][0],
+                        v['act']['BACKEND_FETCH']['init']['var']['bereq.url'][0],
+                        v['act']['BACKEND_FETCH']['init']['var']['bereq.proto'][0]
+                        )
+                if v['act']['PIPE']['init']['event'][0]['k'] == 'Begin':
+                    begin = v['act']['PIPE']['init']['event'][0]['v'].split(' ')
+                session = 0
+            else:
+                if v['act']['initial']['init']['event'][0]['k'] == 'Begin':
+                    begin = v['act']['initial']['init']['event'][0]['v'].split(' ')
+            sg = \
+"""subgraph cluster_vxid_%d {
+    label = "VXID: %d TYPE:%s\\nPARENT: %s REASON:%s";
+labelloc = "t";
+""" % (vxid, vxid,begin[0],begin[1],begin[2])
+            for action,vv in v['act'].items():
+                i = 0
+                tmp = "  VCL_%s_%d [label = \"{<head>%s|" % (action, vxid, action)
+                #search for init,work,fini
+                for key in self.kx:
+                    for vvv in vv[key]['event']:
+                        i+=1
+                        vkey = vvv['k']
+                        vval = vvv['v']
+                        if   vkey == 'return':
+                            retidx[action] = i
+                        elif vkey == 'Link':
+                            lnk.append([action, i, int(vval.split(' ')[1])])
+                        elif vkey == 'call':
+                            vkey = 'Execute'
+                            vval = "vcl_" + vval.lower()
+                        elif vkey == 'Storage':
+                            ext['storage'][self.getHash(vval)] = vval
+                            extlnk['storage'].append([action, vxid, i, vval])
+                        elif vkey == 'BackendOpen':
+                            spl = vval.split(' ')
+                            del spl[-2:]
+                            vt = ' '.join(spl)
+                            ext['backend'][self.getHash(vval)] = vt
+                            extlnk['backend'].append([action, vxid, i, vt])
+                        elif vkey == 'Backend':
+                            spl = vval.split(' ')
+                            del spl[1]
+                            vt = ' '.join(spl)
+                        
+                            if len(extlnk['backend']) >0:
+                                el=extlnk['backend'][-1]
+                                if not(
+                                   el[0] == action and
+                                   el[1] == vxid and
+                                   el[3] == vt):
+                                    ext['backend'][self.getHash(vval)] = vt
+                                    extlnk['backend'].append([action, vxid, i, vt])
+                                
+                            else:
+                                ext['backend'][self.getHash(vval)] = vt
+                                extlnk['backend'].append([action, vxid, i, vt])
+                            
+                        tmp+="<%d>%s:\l%s\l|" % (i, vkey, vval.replace('"',"'"))
+                tmp = tmp.rstrip('|') + "}}}}\"];\n"
+                sg += tmp
+                
+            act += "VCL_start_%d -> VCL_%s_%d:head\n" % (vxid, actidx[0], vxid)
+            if actidx[-1] != 'start':
+                actidx.append('start')
+            if retidx:
+                for i in range(0, len(actidx) -1):
+                    action = actidx[i]
+                    ri = retidx[action]
+                    port = ''
+                    if actidx[i+1] != 'start':
+                        port=':head'
+                    act+="VCL_%s_%d:%d -> VCL_%s_%d%s\n" % (action, vxid, ri, actidx[i+1], vxid,port)
+            lt = ''
+            for l in lnk:
+                lt += "VCL_%s_%d:%d -> VCL_start_%d [dir = both];\n" % (l[0], vxid, l[1], l[2])
+            if session:
+                self.add("VCL_start_%d [label=\"Session\", style=filled];\n" % (vxid))
+            else:
+                self.add("VCL_start_%d [label=\"%s\lhost: %s\l\", style=filled];\n" % (vxid, url, host))
+            self.add(sg)
+            self.add(act)
+            self.add("};\n")
+            self.add(lt)
+        exs = ''
+        for k,v in ext.items():
+            if not v:
+                continue
+            exs += \
+'''
+subgraph cluster_%s {
+    label = "%s";
+    labeljust = "l";
+''' % (k,k)
+            for l in v.values():
+                exs += "%s_%s [label = \"%s\"];\n" % (k,self.getHash(l),l)
+            exs += "}\n"
+            for l in extlnk[k]:
+                exs += "VCL_%s_%d:%d -> %s_%s\n" % (l[0],l[1],l[2],k,self.getHash(l[3]))
+        self.add(exs)
+    def genDOT(self,sessar,vxidar,vxid,rootVxid):
+        self.dot      = ''
+        self.sess     = sessar
+        self.vxid     = vxidar
+        self.rootVxid = rootVxid
+        self.sr       = {}
+        self.getAllSess(self.sr, rootVxid)
+        if len(self.sr) == 0:
+            self.sr = {rootVxid:rootVxid}
+        self.__genDOT()
+        return self.prnHeader()
+    
+    def getData(self,sessar,vxidar,vxid,rootVxid):
+        print self.genDOT(sessar,vxidar,vxid,rootVxid)
+        return self.sr
+
+class im2JSON():
+    def __init__(self,f_dot):
+        self.f_dot = f_dot
+        if f_dot:
+            self.im2dot = im2DOT()
+
     def getAllSess(self, ret, vxid):
         for v in self.sess[vxid]:
             if v is not None and v != vxid and v not in ret:
@@ -247,6 +452,8 @@ class im2JSON():
             ret["sess"][v] = self.sess[v]
             ret["vxid"][v] = self.vxid[v]
             del ret["vxid"][v]['act']['temp']
+        if self.f_dot:
+            ret["dot"] = self.im2dot.genDOT(sessar,vxidar,vxid,rootVxid)
         print json.dumps(ret)
         return sr
         
@@ -484,7 +691,7 @@ class log2chunk(v4filter):
                         return
                 return
             elif '<<' in line:
-                if re_session.match(line) and haslv:
+                if re_session.match(line):
                     self.parse = self.parseSession
                     return
             elif re_request.match(line):
@@ -509,11 +716,17 @@ class log2chunk(v4filter):
         #Debug  {'level': 1L, 'type': 'c', 'reason': 2, 'vxid_parent': 0, 'length': 12L, 'tag': 1L, 'vxid': 34485, 'data': 'RES_MODE 18\x00', 'isbin': 2L}
     def parseSession(self):
         r  = re.compile(r"^[-0-9]+ +([^ ]+) +(.*)$")
+        r2  = re.compile(r"^[-0-9]+ +([^ ]+)$")
         rh = re.compile(r"^[\*0-9]+ +<< +([^ ]+) +>> +(\d+) *$")
         vxid  = 0
         pvxid = 0
         for line in self.__raw:
             m = r.match(line)
+            data = ''
+            if not m:
+                m = r2.match(line)
+            else:
+                data = m.group(2)
             if not m:
                 m = rh.match(line)
                 if not m:
@@ -521,7 +734,6 @@ class log2chunk(v4filter):
                 vxid = int(m.group(2))
                 continue
             ttag = m.group(1)
-            data = m.group(2)
             if ttag == 'Begin':
                 pvxid = int(data.split(' ',3)[1])
             if vxid not in self.data:
@@ -530,11 +742,17 @@ class log2chunk(v4filter):
             
     def parseRequest(self):
         r  = re.compile(r"^[-0-9]+ +([^ ]+) +(.*)$")
+        r2  = re.compile(r"^[-0-9]+ +([^ ]+)$")
         rh = re.compile(r"^[\*0-9]+ +<< +([^ ]+) +>> +(\d+) *$")
         vxid  = 0
         pvxid = 0
         for line in self.__raw:
             m = r.match(line)
+            data = ''
+            if not m:
+                m = r2.match(line)
+            else:
+                data = m.group(2)
             if not m:
                 m = rh.match(line)
                 if not m:
@@ -542,7 +760,6 @@ class log2chunk(v4filter):
                 vxid = int(m.group(2))
                 continue
             ttag = m.group(1)
-            data = m.group(2)
             if ttag == 'Begin':
                 spl = data.split(' ',3)
                 if spl[0]=='req' and spl[2]=='rxreq':
@@ -555,11 +772,17 @@ class log2chunk(v4filter):
 
     def parseVXID(self):
         r  = re.compile(r"^- +([^ ]+) +(.*)$")
+        r2  = re.compile(r"^- +([^ ]+)$")
         rh = re.compile(r"^\* +<< +([^ ]+) +>> +(\d+) *$")
         vxid  = 0
         pvxid = 0
         for line in self.__raw:
             m = r.match(line)
+            data = ''
+            if not m:
+                m = r2.match(line)
+            else:
+                data = m.group(2)
             if not m:
                 m = rh.match(line)
                 if not m:
@@ -567,7 +790,6 @@ class log2chunk(v4filter):
                 vxid = int(m.group(2))
                 continue
             ttag = m.group(1)
-            data = m.group(2)
             if ttag == 'Begin':
                 pvxid = int(data.split(' ',3)[1])
             if vxid not in self.data:
@@ -577,9 +799,15 @@ class log2chunk(v4filter):
     def parseRaw(self):
         #    100073 Timestamp      c Process: 1435425931.782784 1.000796 0.000036
         r = re.compile(r"^ *(\d+) ([^ ]+) +([^ ]) (.*)$")
+        r2 = re.compile(r"^ *(\d+) ([^ ]+) +([^ ])$")
         pvxid=0
         for line in self.__raw:
             m = r.match(line)
+            data = ''
+            if not m:
+                m = r2.match(line)
+            else:
+                data = m.group(4)
             if not m:
                 continue
             vxid = int(m.group(1))
@@ -588,7 +816,6 @@ class log2chunk(v4filter):
                 continue
             ttag = m.group(2)
             type = m.group(3)
-            data = m.group(4)
             if ttag == 'Begin':
                 pvxid = int(data.split(' ',3)[1])
             
@@ -604,7 +831,7 @@ class log2chunk(v4filter):
             return 0
         f = open(self.fname)
         for line in f.readlines():
-            self.__raw.append(line)
+            self.__raw.append(line.rstrip("\r\n"))
         f.close()
         self.chkFmt()
         self.parse()
@@ -660,14 +887,20 @@ class vslTrans4:
     def __init__(self, opts):
         self.source = 'vsl'
         self.odrv   = None
+        f_dot = 0
         if isinstance(opts, list):
             for o,a in opts:
                 if o == '-f':
                     self.source = 'file'
                 elif o == '-j':
-                    self.odrv = im2JSON()
+                    self.odrv = im2JSON(f_dot)
+                elif o == '-d':
+                    f_dot = 1
         if self.odrv is None:
-            self.odrv = im2CLI()
+            if f_dot:
+                self.odrv = im2DOT()
+            else:
+                self.odrv = im2CLI()
         if self.source == 'vsl':
             self.idrv = vsl2chunk(opts,self.odrv.getData)
         else:
