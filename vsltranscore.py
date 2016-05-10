@@ -372,7 +372,7 @@ labelloc = "t";
                                 extlnk['backend'].append([action, vxid, i, vt])
                         elif vkey == 'Error' or vkey == 'FetchError':
                             color = " bgcolor=\"#ffaaaa\""
-                        tmp+="<tr><td %s port=\"%d\" border=\"1\">%s:<br/>%s</td></tr>" % (color, i, vkey, vval.replace('"',"'"))
+                        tmp+="<tr><td %s port=\"%d\" border=\"1\">%s:<br/>%s</td></tr>" % (color, i, vkey, vval.replace('&','&amp;').replace('"','&quot;').replace('<','&lt;').replace('>','&gt;'))
                 tmp += "</table>> ]"
                 sg += tmp
                 
