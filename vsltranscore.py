@@ -428,10 +428,12 @@ subgraph cluster_%s {
         return self.sr
 
 class im2JSON():
-    def __init__(self,f_dot):
-        self.f_dot = f_dot
-        if f_dot:
-            self.im2dot = im2DOT()
+    def __init__(self):
+        self.f_dot = 0
+            
+    def setDOT(self):
+        self.f_dot  = 1
+        self.im2dot = im2DOT()
 
     def getAllSess(self, ret, vxid):
         for v in self.sess[vxid]:
@@ -886,13 +888,13 @@ class vslTrans4:
     def __init__(self, opts):
         self.source = 'vsl'
         self.odrv   = None
-        f_dot = 0
+        f_dot       = 0
         if isinstance(opts, list):
             for o,a in opts:
                 if o == '-f':
                     self.source = 'file'
                 elif o == '-j':
-                    self.odrv = im2JSON(f_dot)
+                    self.odrv = im2JSON()
                 elif o == '-d':
                     f_dot = 1
         if self.odrv is None:
@@ -900,6 +902,8 @@ class vslTrans4:
                 self.odrv = im2DOT()
             else:
                 self.odrv = im2CLI()
+        elif f_dot:
+            self.odrv.setDOT()
         if self.source == 'vsl':
             self.idrv = vsl2chunk(opts,self.odrv.getData)
         else:
