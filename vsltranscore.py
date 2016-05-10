@@ -332,17 +332,21 @@ labelloc = "t";
                 tmp = "  VCL_%s_%d [shape = none; label = <<table border=\"0\" cellspacing=\"0\">" % (action, vxid)
                 tmp += "<tr><td port=\"head\" border=\"1\" bgcolor=\"#bbbbff\">%s</td></tr>" % (action)
                 #search for init,work,fini
+                skipret = 0
                 for key in self.kx:
                     for vvv in vv[key]['event']:
                         i+=1
                         vkey = vvv['k']
                         vval = vvv['v']
                         color = "";
-                        if   vkey == 'return' and not (vval == 'restart' or vval == 'retry'):
-                            retidx[action] = i
+                        if vkey == 'return':
+                            color = " bgcolor=\"#eeeeff\""
+                            if vval == 'restart' or vval == 'retry':
+                                skipret = 1
                         elif vkey == 'Link':
                             lnk.append([action, i, int(vval.split(' ')[1])])
                         elif vkey == 'call':
+                            color = " bgcolor=\"#eeeeff\""
                             vkey = 'Execute'
                             vval = "vcl_" + vval.lower()
                         elif vkey == 'Storage':
@@ -373,6 +377,8 @@ labelloc = "t";
                         elif vkey == 'Error' or vkey == 'FetchError':
                             color = " bgcolor=\"#ffaaaa\""
                         tmp+="<tr><td %s port=\"%d\" border=\"1\">%s:<br/>%s</td></tr>" % (color, i, vkey, vval.replace('&','&amp;').replace('"','&quot;').replace('<','&lt;').replace('>','&gt;'))
+                if not skipret:
+                    retidx[action] = i
                 tmp += "</table>> ]"
                 sg += tmp
                 
