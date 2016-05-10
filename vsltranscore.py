@@ -338,7 +338,7 @@ labelloc = "t";
                         vkey = vvv['k']
                         vval = vvv['v']
                         color = "";
-                        if   vkey == 'return':
+                        if   vkey == 'return' and not (vval == 'restart' or vval == 'retry'):
                             retidx[action] = i
                         elif vkey == 'Link':
                             lnk.append([action, i, int(vval.split(' ')[1])])
@@ -382,6 +382,8 @@ labelloc = "t";
             if retidx:
                 for i in range(0, len(actidx) -1):
                     action = actidx[i]
+                    if action not in retidx:
+                        continue
                     ri = retidx[action]
                     port = ''
                     if actidx[i+1] != 'start':
