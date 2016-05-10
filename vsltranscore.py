@@ -337,6 +337,7 @@ labelloc = "t";
                         i+=1
                         vkey = vvv['k']
                         vval = vvv['v']
+                        color = "";
                         if   vkey == 'return':
                             retidx[action] = i
                         elif vkey == 'Link':
@@ -369,8 +370,9 @@ labelloc = "t";
                             else:
                                 ext['backend'][self.getHash(vval)] = vt
                                 extlnk['backend'].append([action, vxid, i, vt])
-                            
-                        tmp+="<tr><td port=\"%d\" border=\"1\">%s:<br/>%s</td></tr>" % (i, vkey, vval.replace('"',"'"))
+                        elif vkey == 'Error' or vkey == 'FetchError':
+                            color = " bgcolor=\"#ffaaaa\""
+                        tmp+="<tr><td %s port=\"%d\" border=\"1\">%s:<br/>%s</td></tr>" % (color, i, vkey, vval.replace('"',"'"))
                 tmp += "</table>> ]"
                 sg += tmp
                 
