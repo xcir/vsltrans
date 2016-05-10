@@ -344,6 +344,7 @@ labelloc = "t";
                             if vval == 'restart' or vval == 'retry':
                                 skipret = 1
                         elif vkey == 'Link':
+                            color = " bgcolor=\"#eeffee\""
                             lnk.append([action, i, int(vval.split(' ')[1])])
                         elif vkey == 'call':
                             color = " bgcolor=\"#eeeeff\""
