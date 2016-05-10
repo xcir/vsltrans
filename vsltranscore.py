@@ -329,7 +329,8 @@ labelloc = "t";
 """ % (vxid, vxid,begin[0],begin[1],begin[2])
             for action,vv in v['act'].items():
                 i = 0
-                tmp = "  VCL_%s_%d [label = \"{<head>%s|" % (action, vxid, action)
+                tmp = "  VCL_%s_%d [shape = none; label = <<table border=\"0\" cellspacing=\"0\">" % (action, vxid)
+                tmp += "<tr><td port=\"head\" border=\"1\" bgcolor=\"#bbbbff\">%s</td></tr>" % (action)
                 #search for init,work,fini
                 for key in self.kx:
                     for vvv in vv[key]['event']:
@@ -369,8 +370,8 @@ labelloc = "t";
                                 ext['backend'][self.getHash(vval)] = vt
                                 extlnk['backend'].append([action, vxid, i, vt])
                             
-                        tmp+="<%d>%s:\l%s\l|" % (i, vkey, vval.replace('"',"'"))
-                tmp = tmp.rstrip('|') + "}}}}\"];\n"
+                        tmp+="<tr><td port=\"%d\" border=\"1\">%s:<br/>%s</td></tr>" % (i, vkey, vval.replace('"',"'"))
+                tmp += "</table>> ]"
                 sg += tmp
                 
             act += "VCL_start_%d -> VCL_%s_%d:head\n" % (vxid, actidx[0], vxid)
