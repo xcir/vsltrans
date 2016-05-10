@@ -265,7 +265,7 @@ digraph graph_%d {
             #session data. check to next vxid
             clip = self.vxid[self.sess[self.rootVxid][1]]['act']['RECV']['init']['var']['client.ip'][0];
         self.add("Client%d [shape = oval, label = \"client\l%s\"];\n" % (self.rootVxid, clip))
-        self.add("Client%d -> VCL_start_%d [dir = both];\n" %(self.rootVxid, self.rootVxid))
+        self.add("Client%d -> VCL_start_%d\n" %(self.rootVxid, self.rootVxid))
         
         #external link(ex:Storage, Backend Link)
         ext    = {'storage':{},'backend':{}}
@@ -384,8 +384,8 @@ labelloc = "t";
                 sg += tmp
                 
             act += "VCL_start_%d -> VCL_%s_%d:head\n" % (vxid, actidx[0], vxid)
-            if actidx[-1] != 'start':
-                actidx.append('start')
+            #if actidx[-1] != 'start':
+            #    actidx.append('start')
             if retidx:
                 for i in range(0, len(actidx) -1):
                     action = actidx[i]
@@ -398,7 +398,7 @@ labelloc = "t";
                     act+="VCL_%s_%d:%d -> VCL_%s_%d%s\n" % (action, vxid, ri, actidx[i+1], vxid,port)
             lt = ''
             for l in lnk:
-                lt += "VCL_%s_%d:%d -> VCL_start_%d [dir = both];\n" % (l[0], vxid, l[1], l[2])
+                lt += "VCL_%s_%d:%d -> VCL_start_%d \n" % (l[0], vxid, l[1], l[2])
             if session:
                 self.add("VCL_start_%d [label=\"Session\", style=filled];\n" % (vxid))
             else:
