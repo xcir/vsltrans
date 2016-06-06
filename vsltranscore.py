@@ -69,8 +69,8 @@ class v4filter:
         if key not in self.__filter:
             key = '__default'
             if self.debug:
-                print "%15s " % ttag,
-                print cbd
+                print("%15s " % ttag,)
+                print(cbd)
 
         if isinstance(self.__filter[key], list):
             for func in self.__filter[key]:
@@ -436,7 +436,7 @@ subgraph cluster_%s {
         return self.prnHeader()
     
     def getData(self,sessar,vxidar,vxid,rootVxid):
-        print self.genDOT(sessar,vxidar,vxid,rootVxid)
+        print(self.genDOT(sessar,vxidar,vxid,rootVxid))
         return self.sr
 
 class im2JSON():
@@ -467,7 +467,7 @@ class im2JSON():
             del ret["vxid"][v]['act']['temp']
         if self.f_dot:
             ret["dot"] = self.im2dot.genDOT(sessar,vxidar,vxid,rootVxid)
-        print json.dumps(ret)
+        print(json.dumps(ret))
         return sr
         
     
@@ -640,7 +640,7 @@ class im2CLI():
         return ret
     def printCenter(self,num,str):
         l  = len(str)
-        ll = (num - l)/2
+        ll = int((num - l)/2)
         rr = num - l - ll
         
         return (' '*ll + str + ' '*rr)
@@ -661,7 +661,7 @@ class im2CLI():
         ret += self.flushSess(rootVxid,1,'event',prnDone)
         ret += '-'*100
         ret += "\n"
-        print ret
+        print(ret)
         #flush
         return prnDone
     def searchKey(self,k,ar):
@@ -875,7 +875,7 @@ class vsl2chunk(v4filter):
         arg["opt"]   = vops
         self.vap     = varnishapi.VarnishLog(**arg)
         if self.vap.error:
-            print self.vap.error
+            print(self.vap.error)
             exit(1)
         v4filter.__init__(self,opts,self.vap.vut,outcb)
     
