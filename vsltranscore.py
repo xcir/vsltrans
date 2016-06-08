@@ -69,8 +69,8 @@ class v4filter:
         if key not in self.__filter:
             key = '__default'
             if self.debug:
-                print "%15s " % ttag,
-                print cbd
+                print("%15s " % ttag,)
+                print(cbd)
 
         if isinstance(self.__filter[key], list):
             for func in self.__filter[key]:
@@ -265,7 +265,7 @@ digraph graph_%d {
             #session data. check to next vxid
             clip = self.vxid[self.sess[self.rootVxid][1]]['act']['RECV']['init']['var']['client.ip'][0];
         self.add("Client%d [shape = oval, label = \"client\l%s\"];\n" % (self.rootVxid, clip))
-        self.add("Client%d -> VCL_start_%d [dir = both];\n" %(self.rootVxid, self.rootVxid))
+        self.add("Client%d -> VCL_start_%d\n" %(self.rootVxid, self.rootVxid))
         
         #external link(ex:Storage, Backend Link)
         ext    = {'storage':{},'backend':{}}
@@ -329,18 +329,25 @@ labelloc = "t";
 """ % (vxid, vxid,begin[0],begin[1],begin[2])
             for action,vv in v['act'].items():
                 i = 0
-                tmp = "  VCL_%s_%d [label = \"{<head>%s|" % (action, vxid, action)
+                tmp = "  VCL_%s_%d [shape = none; label = <<table border=\"0\" cellspacing=\"0\">" % (action, vxid)
+                tmp += "<tr><td port=\"head\" border=\"1\" bgcolor=\"#bbbbff\">%s</td></tr>" % (action)
                 #search for init,work,fini
+                skipret = 0
                 for key in self.kx:
                     for vvv in vv[key]['event']:
                         i+=1
                         vkey = vvv['k']
                         vval = vvv['v']
-                        if   vkey == 'return':
-                            retidx[action] = i
+                        color = "";
+                        if vkey == 'return':
+                            color = " bgcolor=\"#eeeeff\""
+                            if vval == 'restart' or vval == 'retry':
+                                skipret = 1
                         elif vkey == 'Link':
+                            color = " bgcolor=\"#eeffee\""
                             lnk.append([action, i, int(vval.split(' ')[1])])
                         elif vkey == 'call':
+                            color = " bgcolor=\"#eeeeff\""
                             vkey = 'Execute'
                             vval = "vcl_" + vval.lower()
                         elif vkey == 'Storage':
@@ -368,17 +375,22 @@ labelloc = "t";
                             else:
                                 ext['backend'][self.getHash(vval)] = vt
                                 extlnk['backend'].append([action, vxid, i, vt])
-                            
-                        tmp+="<%d>%s:\l%s\l|" % (i, vkey, vval.replace('"',"'"))
-                tmp = tmp.rstrip('|') + "}}}}\"];\n"
+                        elif vkey == 'Error' or vkey == 'FetchError':
+                            color = " bgcolor=\"#ffaaaa\""
+                        tmp+="<tr><td %s port=\"%d\" border=\"1\">%s:<br/>%s</td></tr>" % (color, i, vkey, vval.replace('&','&amp;').replace('"','&quot;').replace('<','&lt;').replace('>','&gt;'))
+                if not skipret:
+                    retidx[action] = i
+                tmp += "</table>> ]"
                 sg += tmp
                 
             act += "VCL_start_%d -> VCL_%s_%d:head\n" % (vxid, actidx[0], vxid)
-            if actidx[-1] != 'start':
-                actidx.append('start')
+            #if actidx[-1] != 'start':
+            #    actidx.append('start')
             if retidx:
                 for i in range(0, len(actidx) -1):
                     action = actidx[i]
+                    if action not in retidx:
+                        continue
                     ri = retidx[action]
                     port = ''
                     if actidx[i+1] != 'start':
@@ -386,7 +398,7 @@ labelloc = "t";
                     act+="VCL_%s_%d:%d -> VCL_%s_%d%s\n" % (action, vxid, ri, actidx[i+1], vxid,port)
             lt = ''
             for l in lnk:
-                lt += "VCL_%s_%d:%d -> VCL_start_%d [dir = both];\n" % (l[0], vxid, l[1], l[2])
+                lt += "VCL_%s_%d:%d -> VCL_start_%d \n" % (l[0], vxid, l[1], l[2])
             if session:
                 self.add("VCL_start_%d [label=\"Session\", style=filled];\n" % (vxid))
             else:
@@ -424,14 +436,16 @@ subgraph cluster_%s {
         return self.prnHeader()
     
     def getData(self,sessar,vxidar,vxid,rootVxid):
-        print self.genDOT(sessar,vxidar,vxid,rootVxid)
+        print(self.genDOT(sessar,vxidar,vxid,rootVxid))
         return self.sr
 
 class im2JSON():
-    def __init__(self,f_dot):
-        self.f_dot = f_dot
-        if f_dot:
-            self.im2dot = im2DOT()
+    def __init__(self):
+        self.f_dot = 0
+            
+    def setDOT(self):
+        self.f_dot  = 1
+        self.im2dot = im2DOT()
 
     def getAllSess(self, ret, vxid):
         for v in self.sess[vxid]:
@@ -453,7 +467,7 @@ class im2JSON():
             del ret["vxid"][v]['act']['temp']
         if self.f_dot:
             ret["dot"] = self.im2dot.genDOT(sessar,vxidar,vxid,rootVxid)
-        print json.dumps(ret)
+        print(json.dumps(ret))
         return sr
         
     
@@ -626,7 +640,7 @@ class im2CLI():
         return ret
     def printCenter(self,num,str):
         l  = len(str)
-        ll = (num - l)/2
+        ll = int((num - l)/2)
         rr = num - l - ll
         
         return (' '*ll + str + ' '*rr)
@@ -647,7 +661,7 @@ class im2CLI():
         ret += self.flushSess(rootVxid,1,'event',prnDone)
         ret += '-'*100
         ret += "\n"
-        print ret
+        print(ret)
         #flush
         return prnDone
     def searchKey(self,k,ar):
@@ -861,7 +875,7 @@ class vsl2chunk(v4filter):
         arg["opt"]   = vops
         self.vap     = varnishapi.VarnishLog(**arg)
         if self.vap.error:
-            print self.vap.error
+            print(self.vap.error)
             exit(1)
         v4filter.__init__(self,opts,self.vap.vut,outcb)
     
@@ -886,13 +900,13 @@ class vslTrans4:
     def __init__(self, opts):
         self.source = 'vsl'
         self.odrv   = None
-        f_dot = 0
+        f_dot       = 0
         if isinstance(opts, list):
             for o,a in opts:
                 if o == '-f':
                     self.source = 'file'
                 elif o == '-j':
-                    self.odrv = im2JSON(f_dot)
+                    self.odrv = im2JSON()
                 elif o == '-d':
                     f_dot = 1
         if self.odrv is None:
@@ -900,6 +914,8 @@ class vslTrans4:
                 self.odrv = im2DOT()
             else:
                 self.odrv = im2CLI()
+        elif f_dot:
+            self.odrv.setDOT()
         if self.source == 'vsl':
             self.idrv = vsl2chunk(opts,self.odrv.getData)
         else:
