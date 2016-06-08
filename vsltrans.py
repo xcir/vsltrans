@@ -16,9 +16,9 @@ def main(opts):
 if __name__ == '__main__':
 	try:
 		opts,args = getopt.getopt(sys.argv[1:],"djVP:q:f:n:", ["sopath=","debug"])
-	except getopt.GetoptError:
-		print 'invalid option'
-		print 'usage: vsltrans -f [logfile] -q [query] --sopath [libvarnishapi.so] -n [instance-name] -V -j'
+	except(getopt.GetoptError):
+		print('invalid option')
+		print('usage: vsltrans -f [logfile] -q [query] --sopath [libvarnishapi.so] -n [instance-name] -V -j')
 		sys.exit(2)
 	
 	d_flag = False
@@ -29,17 +29,17 @@ if __name__ == '__main__':
 		elif o == '-P':
 			p_file = a
 		elif o == '-V':
-			print 'vsltrans (v0.x)'
+			print('vsltrans (v0.x)')
 			sys.exit(0)
 		elif o == '-n':
-			print 'using instance %s' % a
+			print('using instance %s' % a)
 	if d_flag:
 		try:
 			pid = os.fork()
 			if pid > 0:
 				sys.exit(0)
-		except OSError, e:
-			print >>sys.stderr, "fork #1 failed: %d (%s)" % (e.errno, e.strerror)
+		except(OSError, e):
+			sys.stderr.write("fork #1 failed: %d (%s)" % (e.errno, e.strerror))
 			sys.exit(1)
 		os.chdir("/")
 		os.setsid()
@@ -50,8 +50,8 @@ if __name__ == '__main__':
 				if p_file:
 					open(p_file,'w').write("%d"%pid)
 				sys.exit(0)
-		except OSError, e:
-			print >>sys.stderr, "fork #2 failed: %d (%s)" % (e.errno, e.strerror)
+		except(OSError, e):
+			sys.stderr.write("fork #2 failed: %d (%s)" % (e.errno, e.strerror))
 			sys.exit(1)
 	main(opts)
 
