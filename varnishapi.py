@@ -298,9 +298,9 @@ class VSLUtil:
         if r == '':
             return ret
         elif r[-1:] == '.':
-            spl = data.split(': ', 1)
+            spl = data.split(':', 1)
             ret['key'] = r + spl[0]
-            ret['val'] = spl[1]
+            ret['val'] = spl[1].strip()
         else:
             ret['key'] = r
             ret['val'] = data
@@ -417,7 +417,7 @@ class VarnishAPI:
             if tmp[i] is None:
                 self.VSL_tags.append(None)
             else:
-                self.VSL_tags.append(tmp[i].decode("ascii"))
+                self.VSL_tags.append(tmp[i].decode("utf8"))
                 self.VSL_tags_rev[tmp[i]] = i
 
         VSLTAGFLAGS = c_uint * 256
@@ -492,15 +492,15 @@ class VarnishStat(VarnishAPI):
         sec = pt[0].section
         key = ''
 
-        type = sec[0].fantom[0].type.decode("ascii")
-        ident = sec[0].fantom[0].ident.decode("ascii")
+        type = sec[0].fantom[0].type.decode("utf8")
+        ident = sec[0].fantom[0].ident.decode("utf8")
         if type != '':
             key += type + '.'
         if ident != '':
             key += ident + '.'
-        key += pt[0].desc[0].name.decode("ascii")
+        key += pt[0].desc[0].name.decode("utf8")
 
-        self.__buf[key] = {'val': val, 'desc': pt[0].desc[0].sdesc.decode("ascii")}
+        self.__buf[key] = {'val': val, 'desc': pt[0].desc[0].sdesc.decode("utf8")}
 
         return(0)
 
@@ -539,7 +539,7 @@ class VarnishLog(VarnishAPI):
         for o in opts:
             op = o[0].lstrip('-')
             arg = o[1]
-            self.__Arg(op, arg.encode("ascii"))
+            self.__Arg(op, arg.encode("utf8"))
 
         # Check
         if self.__r_arg and self.vsm:
@@ -579,7 +579,7 @@ class VarnishLog(VarnishAPI):
             # default
             i = self.__VSL_Arg(op, arg)
             if i < 0:
-                self.error = "%s" % self.lib.VSL_Error(self.vsl).decode("ascii")
+                self.error = "%s" % self.lib.VSL_Error(self.vsl).decode("utf8")
             return(i)
 
     def __Setup(self):
@@ -588,7 +588,7 @@ class VarnishLog(VarnishAPI):
         else:
             if self.lib.VSM_Open(self.vsm):
                 self.error = "Can't open VSM file (%s)" % self.lib.VSM_Error(
-                    self.vsm).decode("ascii").rstrip()
+                    self.vsm).decode("utf8").rstrip()
                 return(0)
             self.name = self.lva.VSM_Name(self.vsm)
 
@@ -601,14 +601,14 @@ class VarnishLog(VarnishAPI):
                 self.vsl, self.vsm, tail | self.defi.VSL_COPT_BATCH)
 
         if not c:
-            self.error = "Can't open log (%s)" % self.lva.VSL_Error(self.vsl).decode("ascii")
+            self.error = "Can't open log (%s)" % self.lva.VSL_Error(self.vsl).decode("utf8")
             return(0)
         # query
         z = cast(c, c_void_p)
         self.vslq = self.lva.VSLQ_New(self.vsl, z, self.__g_arg, self.__q_arg)
         if not self.vslq:
             self.error = "Query expression error:\n%s" % self.lib.VSL_Error(
-                self.vsl).decode("ascii")
+                self.vsl).decode("utf8")
             return(0)
 
         return(1)
@@ -620,13 +620,13 @@ class VarnishLog(VarnishAPI):
             # Reconnect VSM
             time.sleep(0.1)
             if self.lib.VSM_Open(self.vsm):
-                self.lib.VSM_ResetError(self.vsm).decode("ascii")
+                self.lib.VSM_ResetError(self.vsm).decode("utf8")
                 return(1)
             c = self.lva.VSL_CursorVSM(
                 self.vsl, self.vsm,
                 self.defi.VSL_COPT_TAIL | self.defi.VSL_COPT_BATCH)
             if not c:
-                self.lib.VSM_ResetError(self.vsm).decode("ascii")
+                self.lib.VSM_ResetError(self.vsm).decode("utf8")
                 self.lib.VSM_Close(self.vsm)
                 return(1)
             z = cast(c, c_void_p)
@@ -719,7 +719,7 @@ class VarnishLog(VarnishAPI):
                 if cbd['isbin'] == self.defi.SLT_F_BINARY:
                   cbd['data'] = string_at(c.rec.ptr, length + 8)[8:]
                 else:
-                  cbd['data'] = string_at(c.rec.ptr, length + 8)[8:].decode("ascii")
+                  cbd['data'] = string_at(c.rec.ptr, length + 8)[8:].decode("utf8")
                 
                 if self.__cb:
                     self.__cb(self, cbd, self.__priv)
