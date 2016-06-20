@@ -8,8 +8,8 @@ Re-format tool for vsl(varnishlog)
 -----------------------------------
 
 :Author: Shohei Tanaka(@xcir)
-:Date: 2016-06-07
-:Version: 0.7-varnish40
+:Date: 2016-06-20
+:Version: 0.8-varnish40
 :Support Varnish Version: 4.1.x, 4.0.x
 :Manual section: 1
 
@@ -642,6 +642,8 @@ OUTPUT SAMPLE
 
 HISTORY
 ===========
+
+Version 0.8-varnish40: Update varnishapi(include 40.14)
 
 Version 0.7-varnish40: Initial support for Python3. Feedback is welcome.
 
