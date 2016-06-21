@@ -26,7 +26,7 @@
 # SUCH DAMAGE.
 
 # https://github.com/xcir/python-varnishapi
-# v40.14
+# v40.15
 
 from ctypes import *
 import getopt
@@ -624,13 +624,13 @@ class VarnishLog(VarnishAPI):
             # Reconnect VSM
             time.sleep(0.1)
             if self.lib.VSM_Open(self.vsm):
-                self.lib.VSM_ResetError(self.vsm).decode("utf8")
+                self.lib.VSM_ResetError(self.vsm)
                 return(1)
             c = self.lva.VSL_CursorVSM(
                 self.vsl, self.vsm,
                 self.defi.VSL_COPT_TAIL | self.defi.VSL_COPT_BATCH)
             if not c:
-                self.lib.VSM_ResetError(self.vsm).decode("utf8")
+                self.lib.VSM_ResetError(self.vsm)
                 self.lib.VSM_Close(self.vsm)
                 return(1)
             z = cast(c, c_void_p)
