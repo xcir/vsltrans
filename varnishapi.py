@@ -26,7 +26,7 @@
 # SUCH DAMAGE.
 
 # https://github.com/xcir/python-varnishapi
-# v40.15
+# v40.16
 
 from ctypes import *
 import getopt
@@ -420,7 +420,7 @@ class VarnishAPI:
             if tmp[i] is None:
                 self.VSL_tags.append(None)
             else:
-                self.VSL_tags.append(tmp[i].decode("utf8"))
+                self.VSL_tags.append(tmp[i].decode("utf8", "replace"))
                 self.VSL_tags_rev[tmp[i]] = i
 
         VSLTAGFLAGS = c_uint * 256
@@ -495,15 +495,15 @@ class VarnishStat(VarnishAPI):
         sec = pt[0].section
         key = ''
 
-        type = sec[0].fantom[0].type.decode("utf8")
-        ident = sec[0].fantom[0].ident.decode("utf8")
+        type = sec[0].fantom[0].type.decode("utf8", "replace")
+        ident = sec[0].fantom[0].ident.decode("utf8", "replace")
         if type != '':
             key += type + '.'
         if ident != '':
             key += ident + '.'
-        key += pt[0].desc[0].name.decode("utf8")
+        key += pt[0].desc[0].name.decode("utf8", "replace")
 
-        self.__buf[key] = {'val': val, 'desc': pt[0].desc[0].sdesc.decode("utf8")}
+        self.__buf[key] = {'val': val, 'desc': pt[0].desc[0].sdesc.decode("utf8", "replace")}
 
         return(0)
 
@@ -543,7 +543,7 @@ class VarnishLog(VarnishAPI):
         for o in opts:
             op = o[0].lstrip('-')
             arg = o[1]
-            self.__Arg(op, arg.encode("utf8"))
+            self.__Arg(op, arg.encode("utf8", "replace"))
 
         # Check
         if self.__r_arg and self.vsm:
@@ -583,7 +583,7 @@ class VarnishLog(VarnishAPI):
             # default
             i = self.__VSL_Arg(op, arg)
             if i < 0:
-                self.error = "%s" % self.lib.VSL_Error(self.vsl).decode("utf8")
+                self.error = "%s" % self.lib.VSL_Error(self.vsl).decode("utf8", "replace")
             return(i)
 
     def __Setup(self):
@@ -592,7 +592,7 @@ class VarnishLog(VarnishAPI):
         else:
             if self.lib.VSM_Open(self.vsm):
                 self.error = "Can't open VSM file (%s)" % self.lib.VSM_Error(
-                    self.vsm).decode("utf8").rstrip()
+                    self.vsm).decode("utf8", "replace").rstrip()
                 return(0)
             self.name = self.lva.VSM_Name(self.vsm)
 
@@ -605,14 +605,14 @@ class VarnishLog(VarnishAPI):
                 self.vsl, self.vsm, tail | self.defi.VSL_COPT_BATCH)
 
         if not c:
-            self.error = "Can't open log (%s)" % self.lva.VSL_Error(self.vsl).decode("utf8")
+            self.error = "Can't open log (%s)" % self.lva.VSL_Error(self.vsl).decode("utf8", "replace")
             return(0)
         # query
         z = cast(c, c_void_p)
         self.vslq = self.lva.VSLQ_New(self.vsl, z, self.__g_arg, self.__q_arg)
         if not self.vslq:
             self.error = "Query expression error:\n%s" % self.lib.VSL_Error(
-                self.vsl).decode("utf8")
+                self.vsl).decode("utf8", "replace")
             return(0)
 
         return(1)
@@ -723,7 +723,7 @@ class VarnishLog(VarnishAPI):
                 if cbd['isbin'] == self.defi.SLT_F_BINARY or not self.dataDecode:
                   cbd['data'] = string_at(c.rec.ptr, length + 8)[8:]
                 else:
-                  cbd['data'] = string_at(c.rec.ptr, length + 8)[8:].decode("utf8")
+                  cbd['data'] = string_at(c.rec.ptr, length + 8)[8:].decode("utf8", "replace")
                 
                 if self.__cb:
                     self.__cb(self, cbd, self.__priv)

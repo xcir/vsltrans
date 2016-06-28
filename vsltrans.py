@@ -29,7 +29,7 @@ if __name__ == '__main__':
 		elif o == '-P':
 			p_file = a
 		elif o == '-V':
-			print('vsltrans (v0.x)')
+			print('vsltrans (v0.10)')
 			sys.exit(0)
 		elif o == '-n':
 			print('using instance %s' % a)
