@@ -148,6 +148,10 @@ class v4filter:
     def fEnd(self, ttag, vxid, cbd):
         #vxid flush
         vd = self.vxid[vxid]
+        if len(vd['actidx']) == 0:
+            #強制フラッシュ
+            self._fVCLReturn(ttag, vxid, cbd)
+
         ak = vd['actidx'][-1]
         vd['act'][ak]['fini'] = copy.deepcopy(vd['act']['temp']['init'])
         vd['act']['temp']['fini'] = {'var':{},'event':[]}
@@ -191,20 +195,22 @@ class v4filter:
         vd['actcur']  = cbd['data']
         
         return 1
-        
-    def fVCLReturn(self, ttag, vxid, cbd):
-        #todo:わざわざ名前変えるか再検討(vcl_returnに戻す？VCL表記に合わす？）
-        if ttag == 'VCL_return':
-            ttag = 'return'
-        self.appendEvent(vxid,ttag,cbd['data'])
 
-
+    def _fVCLReturn(self, ttag, vxid, cbd):
         vd = self.vxid[vxid]
         vd['act'][vd['actcur']] = copy.deepcopy(vd['act']['temp'])
         vd['act']['temp'] = {'init':{'var':{},'event':[]},'work':{'var':{},'event':[]},'fini':{'var':{},'event':[]}}
         vd['actidx'].append(vd['actcur'])
         vd['actcur']  = None
         vd['actstat'] = 'init'
+
+    def fVCLReturn(self, ttag, vxid, cbd):
+        #todo:わざわざ名前変えるか再検討(vcl_returnに戻す？VCL表記に合わす？）
+        if ttag == 'VCL_return':
+            ttag = 'return'
+        self.appendEvent(vxid,ttag,cbd['data'])
+        self._fVCLReturn(ttag, vxid, cbd)
+
         return 1
 
     def fRequest(self, ttag, vxid, cbd):
