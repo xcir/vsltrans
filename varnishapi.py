@@ -26,7 +26,7 @@
 # SUCH DAMAGE.
 
 # https://github.com/xcir/python-varnishapi
-# v52.21
+# v52.23
 
 from ctypes import *
 import getopt
@@ -159,7 +159,7 @@ VSL_tagfind_f = CFUNCTYPE(
 
 #typedef void *VSC_new_f(void *priv, const struct VSC_point *const pt);
 VSC_new_f = CFUNCTYPE(
-    None,
+    c_void_p,
     c_void_p,
     POINTER(VSC_point20)
 )
@@ -1396,16 +1396,21 @@ class VarnishStat(VarnishAPI):
             self.__setArg(opt)
 
         if self.lva.apiversion >= 2.0:
+            self.vsc = self.lva.VSC_New();
             self.__Setup20()
         else:
             self.__Setup10()
+
+    def Fini(self):
+        if self.lva.apiversion >= 2.0:
+            self.lva.VSC_Destroy(byref(cast(self.vsc, c_void_p)), self.vsm)
+        VarnishAPI.Fini(self)
 
     def __Setup20(self):
         if self.lva.VSM_Attach(self.vsm, 2):
             self.error = "VSM: %s" % self.lva.VSM_Error(
                 self.vsm).decode("utf8", "replace").rstrip()
             return(0)
-        self.vsc = self.lva.VSC_New();
 
     def __Setup10(self):
         if self.lva.VSM_Open(self.vsm):
@@ -1457,7 +1462,7 @@ class VarnishStat(VarnishAPI):
         if not bool(pt):
             return(0)
         val = pt[0].ptr[0]
-        key = pt[0].name
+        key = pt[0].name.decode("utf8", "replace")
         self._buf[key] = {'val': val, 'desc': pt[0].sdesc.decode("utf8", "replace")}
 
         return(0)
@@ -1610,88 +1615,99 @@ class VarnishLog(VarnishAPI):
 
         return(1)
 
-    def __cbMain(self, cb, priv=None):
-        self._cb = cb
-        self._priv = priv
-        if not self.vslq:
-            # Reconnect VSM
-            time.sleep(0.1)
-            if self.lva.VSM_Open(self.vsm):
-                self.lva.VSM_ResetError(self.vsm)
-                return(1)
-            c = self.lva.VSL_CursorVSM(
-                self.vsl, self.vsm,
-                self.defi.VSL_COPT_TAIL | self.defi.VSL_COPT_BATCH)
-            if not c:
-                self.lva.VSM_ResetError(self.vsm)
-                self.lva.VSM_Close(self.vsm)
-                return(1)
-            self.vslq = self.lva.VSLQ_New(
-                self.vsl, c, self.__g_arg, self.__q_arg)
-            self.error = 'Log reacquired'
-        i = self.lva.VSLQ_Dispatch(
-            self.vslq, VSLQ_dispatch_f(self._callBack), None)
-        return(i)
 
-    def __Dispatch10(self, cb, priv=None):
-        i = self.__cbMain(cb, priv)
-        if i > -2:
-            return i
-        if not self.vsm:
-            return i
-
-        self.lva.VSLQ_Flush(self.vslq, VSLQ_dispatch_f(self._callBack), None)
-        self.lva.VSLQ_Delete(byref(cast(self.vslq, c_void_p)))
-        self.vslq = None
-        if i == -2:
-            self.error = "Log abandoned"
-            #self.lva.VSM_Destroy(POINTER(self.vsm))
-            self.lva.VSM_Close(self.vsm)
-        if i < -2:
-            self.error = "Log overrun"
-        return i
-
-    def __Dispatch20(self, cb, priv=None):
-        if self.vsm:
-            stat = self.lva.VSM_Status(self.vsm)
-            if stat & self.defi.VSM_WRK_RESTARTED:
-                if self.hascursor < 1:
-                    self.error = "Log abandoned"
-                    self.lva.VSLQ_SetCursor(self.vslq, None)
-                    self.hascursor = 0
-            if self.hascursor < 1:
+    def __Dispatch10(self, maxread):
+        while True:
+            if not self.vslq:
+                # Reconnect VSM
                 time.sleep(0.1)
-                c = self.lva.VSL_CursorVSM(self.vsl, self.vsm, self.cursor_opt)
-                if c == None:
-                    self.lva.VSL_ResetError(self.vsl)
-                    return 0
-                if self.hascursor == 0:
-                    self.error = "Log reacquired"
-                self.hascursor = 1
-                self.lva.VSLQ_SetCursor(self.vslq, byref(cast(c, c_void_p)))
-        
-        
-        i = self.__cbMain(cb, priv)
-        
-        if i > -2:
-            return i
-        if not self.vsm:
+                if self.lva.VSM_Open(self.vsm):
+                    self.lva.VSM_ResetError(self.vsm)
+                    return(1)
+                c = self.lva.VSL_CursorVSM(
+                    self.vsl, self.vsm,
+                    self.defi.VSL_COPT_TAIL | self.defi.VSL_COPT_BATCH)
+                if not c:
+                    self.lva.VSM_ResetError(self.vsm)
+                    self.lva.VSM_Close(self.vsm)
+                    return(1)
+                self.vslq = self.lva.VSLQ_New(
+                    self.vsl, c, self.__g_arg, self.__q_arg)
+                self.error = 'Log reacquired'
+
+            i = self.lva.VSLQ_Dispatch(
+                self.vslq, VSLQ_dispatch_f(self._callBack), None)
+
+            if i == 1 and maxread != 1:
+               if maxread > 1:
+                   maxread-=1
+               continue
+            elif i > -2:
+                return i
+            if not self.vsm:
+                return i
+
+            self.lva.VSLQ_Flush(self.vslq, VSLQ_dispatch_f(self._callBack), None)
+            self.lva.VSLQ_Delete(byref(cast(self.vslq, c_void_p)))
+            self.vslq = None
+            if i == -2:
+                self.error = "Log abandoned"
+                #self.lva.VSM_Destroy(POINTER(self.vsm))
+                self.lva.VSM_Close(self.vsm)
+            if i < -2:
+                self.error = "Log overrun"
             return i
 
-        self.lva.VSLQ_Flush(self.vslq, VSLQ_dispatch_f(self._callBack), None)
-        if i == -2:
-            self.error = "Log abandoned"
-            self.hascursor = 0
-            self.lva.VSLQ_SetCursor(self.vslq, None)
-        if i < -2:
-            self.error = "Log overrun"
-        return i
+    def __Dispatch20(self, maxread):
+        while True:
+            if self.vsm:
+                stat = self.lva.VSM_Status(self.vsm)
+                if stat & self.defi.VSM_WRK_RESTARTED:
+                    if self.hascursor < 1:
+                        self.error = "Log abandoned"
+                        self.lva.VSLQ_SetCursor(self.vslq, None)
+                        self.hascursor = 0
+                if self.hascursor < 1:
+                    time.sleep(0.1)
+                    c = self.lva.VSL_CursorVSM(self.vsl, self.vsm, self.cursor_opt)
+                    if c == None:
+                        self.lva.VSL_ResetError(self.vsl)
+                        return 0
+                    if self.hascursor == 0:
+                        self.error = "Log reacquired"
+                    self.hascursor = 1
+                    self.lva.VSLQ_SetCursor(self.vslq, byref(cast(c, c_void_p)))
+            
+            i = self.lva.VSLQ_Dispatch(
+                self.vslq, VSLQ_dispatch_f(self._callBack), None)
 
-    def Dispatch(self, cb, priv=None):
+            if i == 1 and maxread != 1:
+                if maxread > 1:
+                    maxread-=1
+                continue
+            elif i > -2:
+                return i
+            if not self.vsm:
+                return i
+
+            self.lva.VSLQ_Flush(self.vslq, VSLQ_dispatch_f(self._callBack), None)
+            if i == -2:
+                self.error = "Log abandoned"
+                self.hascursor = 0
+                self.lva.VSLQ_SetCursor(self.vslq, None)
+            if i < -2:
+                self.error = "Log overrun"
+            return i
+
+    def Dispatch(self, cb=None, priv=None, maxread=1, vxidcb=None, groupcb=None):
+        self._cb = cb
+        self._vxidcb = vxidcb
+        self._groupcb = groupcb
+        self._priv = priv
         if self.lva.apiversion >= 2.0:
-            return self.__Dispatch20(cb, priv)
+            return self.__Dispatch20(maxread)
         else:
-            return self.__Dispatch10(cb, priv)
+            return self.__Dispatch10(maxread)
 
     def Fini(self):
         if self.vslq:
@@ -1715,14 +1731,16 @@ class VarnishLog(VarnishAPI):
             t = pt[idx]
             if not bool(t):
                 break
+
             tra = t[0]
             cbd = {
                 'level': tra.level,
                 'vxid': tra.vxid,
                 'vxid_parent': tra.vxid_parent,
                 'reason': tra.reason,
+                'type': None,
+                'transaction_type': tra.type,
             }
-
             while 1:
                 i = self.lva.VSL_Next(tra.c)
                 if i < 0:
@@ -1732,20 +1750,27 @@ class VarnishLog(VarnishAPI):
                 if not self.lva.VSL_Match(self.vsl, tra.c):
                     continue
 
-                # decode vxid type ...
+                # decode length tag type(thread)...
                 ptr = tra.c[0].rec.ptr
                 cbd['length'] = ptr[0] & 0xffff
                 cbd['tag'] = self.VSL_TAG(ptr)
-                if ptr[1] & (1 << 30):
-                    cbd['type'] = 'c'
-                elif ptr[1] & (1 << 31):
-                    cbd['type'] = 'b'
-                else:
-                    cbd['type'] = '-'
+                if cbd['type'] is None:
+                    if ptr[1] & 0x40000000: #1<<30
+                        cbd['type'] = 'c'
+                    elif ptr[1] & 0x80000000: #1<<31
+                        cbd['type'] = 'b'
+                    else:
+                        cbd['type'] = '-'
                 cbd['isbin'] = self.VSL_tagflags[cbd['tag']] & self.defi.SLT_F_BINARY
                 isbin = cbd['isbin'] == self.defi.SLT_F_BINARY or not self.dataDecode
                 cbd['data'] = self.VSL_DATA(ptr, isbin)
 
-                if self._cb:
+                if self._cb is not None:
                     self._cb(self, cbd, self._priv)
+            if self._vxidcb is not None:
+                self._vxidcb(self, self._priv)
+
+        if self._groupcb:
+            self._groupcb(self, self._priv)
+
         return(0)
