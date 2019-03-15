@@ -1,7 +1,7 @@
 # coding: utf-8
 import varnishapi
 
-import threading,time,signal,copy,sys,re,os,time,binascii,json,hashlib
+import threading,time,copy,sys,re,os,time,binascii,json,hashlib
 
 
 class v4filter:
@@ -893,10 +893,6 @@ class vsl2chunk(v4filter):
                 time.sleep(0.1)
 
     def vapCallBack(self, vap, cbd, priv):
-        if not cbd['isbin']:
-            cbd['length'] -= 1;
-            cbd['data']   = cbd['data'][:-1]
-            
         ttag = vap.VSL_tags[cbd['tag']]
         self.filter(ttag,cbd)
     

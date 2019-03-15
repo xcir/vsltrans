@@ -26,39 +26,13 @@
 # SUCH DAMAGE.
 
 # https://github.com/xcir/python-varnishapi
-# v52.23
+# v60.24
 
 from ctypes import *
 import getopt
 import time
-
-
-
-class VUT (Structure):
-    _fields_ = [
-        ("magic" , c_uint),   #unsigned	magic;
-        ("progname" , c_char_p),            #const char	*progname;
-        ("d_opt" , c_int),                  #int		d_opt;
-        ("D_opt" , c_int),                  #int		D_opt;
-        ("g_arg" , c_int),                  #int		g_arg;
-        ("k_arg" , c_int),                  #int		k_arg;
-        ("n_arg" , c_char_p),               #char		*n_arg;
-        ("P_arg" , c_char_p),               #char		*P_arg;
-        ("q_arg" , c_char_p),               #char		*q_arg;
-        ("r_arg" , c_char_p),               #char		*r_arg;
-        ("t_arg" , c_char_p),               #char		*t_arg;
-        ("vsl" , c_void_p),                 #struct VSL_data	*vsl;
-        ("vsm" , c_void_p),                 #struct vsm	*vsm;
-        ("vslq" , c_void_p),                #struct VSLQ	*vslq;
-        ("sighup" , c_int),                 #int		sighup;
-        ("sigint" , c_int),                 #int		sigint;
-        ("sigusr1" , c_int),                #int		sigusr1;
-        ("idle_f" , c_void_p),              #VUT_cb_f	*idle_f;
-        ("sighup_f" , c_void_p),            #VUT_cb_f	*sighup_f;
-        ("error_f" , c_void_p),             #VUT_error_f	*error_f;
-        ("dispatch_f" , c_void_p),          #VSLQ_dispatch_f	*dispatch_f;
-        ("dispatch_priv" , c_void_p)        #void		*dispatch_priv;
-    ]
+import signal
+from threading import Thread
 
 class VSC_level_desc(Structure):
     _fields_ = [
@@ -273,16 +247,14 @@ class vopt_spec (Structure):
     ]
 
 
-
-
-
 class VarnishAPIDefine40:
 
     def __init__(self):
         self.VSL_COPT_TAIL = (1 << 0)
         self.VSL_COPT_BATCH = (1 << 1)
         self.VSL_COPT_TAILSTOP = (1 << 2)
-        self.SLT_F_BINARY = (1 << 1)
+        self.SLT_F_UNSAFE = (1 << 1)
+        self.SLT_F_BINARY = (1 << 2)
         
         self.VSM_MGT_RUNNING = (1 << 1)
         self.VSM_MGT_CHANGED = (1 << 2)
@@ -382,8 +354,60 @@ VSLQ_dispatch_f = CFUNCTYPE(
 # typedef int VUT_cb_f(struct VUT *);
 VUT_cb_f = CFUNCTYPE(
     c_int,
-    POINTER(VUT)
+    c_void_p  #POINTER(VUT)
 )
+
+class VUT (Structure):
+    _fields_ = [
+        ("magic" , c_uint),   #unsigned	magic;
+        ("progname" , c_char_p),            #const char	*progname;
+        ("d_opt" , c_int),                  #int		d_opt;
+        ("D_opt" , c_int),                  #int		D_opt;
+        ("g_arg" , c_int),                  #int		g_arg;
+        ("k_arg" , c_int),                  #int		k_arg;
+        ("n_arg" , c_char_p),               #char		*n_arg;
+        ("P_arg" , c_char_p),               #char		*P_arg;
+        ("q_arg" , c_char_p),               #char		*q_arg;
+        ("r_arg" , c_char_p),               #char		*r_arg;
+        ("t_arg" , c_char_p),               #char		*t_arg;
+        ("vsl" , c_void_p),                 #struct VSL_data	*vsl;
+        ("vsm" , c_void_p),                 #struct vsm	*vsm;
+        ("vslq" , c_void_p),                #struct VSLQ	*vslq;
+        ("sighup" , c_int),                 #int		sighup;
+        ("sigint" , c_int),                 #int		sigint;
+        ("sigusr1" , c_int),                #int		sigusr1;
+        ("idle_f" , VUT_cb_f),              #VUT_cb_f	*idle_f;
+        ("sighup_f" , VUT_cb_f),            #VUT_cb_f	*sighup_f;
+        ("error_f" , c_void_p),             #VUT_error_f	*error_f;
+        ("dispatch_f" , VSLQ_dispatch_f),   #VSLQ_dispatch_f	*dispatch_f;
+        ("dispatch_priv" , c_void_p)        #void		*dispatch_priv;
+    ]
+
+class VUT_22 (Structure):
+    _fields_ = [
+        ("magic" , c_uint),   #unsigned	magic;
+        ("progname" , c_char_p),            #const char	*progname;
+        ("d_opt" , c_int),                  #int		d_opt;
+        ("D_opt" , c_int),                  #int		D_opt;
+        ("g_arg" , c_int),                  #int		g_arg;
+        ("k_arg" , c_int),                  #int		k_arg;
+        ("n_arg" , c_char_p),               #char		*n_arg;
+        ("P_arg" , c_char_p),               #char		*P_arg;
+        ("q_arg" , c_char_p),               #char		*q_arg;
+        ("r_arg" , c_char_p),               #char		*r_arg;
+        ("t_arg" , c_char_p),               #char		*t_arg;
+        ("vsl" , c_void_p),                 #struct VSL_data	*vsl;
+        ("vsm" , c_void_p),                 #struct vsm	*vsm;
+        ("vslq" , c_void_p),                #struct VSLQ	*vslq;
+        ("last_sighup" , c_int),            #sig_atomic_t	last_sighup;
+        ("last_sigusr1" , c_int),           #sig_atomic_t	last_sigusr1;
+        ("idle_f" , VUT_cb_f),              #VUT_cb_f	*idle_f;
+        ("sighup_f" , VUT_cb_f),            #VUT_cb_f	*sighup_f;
+        ("error_f" , c_void_p),             #VUT_error_f	*error_f;
+        ("dispatch_f" , VSLQ_dispatch_f),   #VSLQ_dispatch_f	*dispatch_f;
+        ("dispatch_priv" , c_void_p)        #void		*dispatch_priv;
+    ]
+
 class LIBVARNISHAPI10:
     def __init__(self, lc):
         self.lc = lc
@@ -795,7 +819,11 @@ class LIBVARNISHAPI20:
         self.lc = lc
     
     def run(self, lib):
-        if hasattr(lib, "VSM_Map"):
+        if hasattr(lib, "VSIG_Got_int"):
+            self.lc.apiversion = 2.2
+        #elif hasattr(lib, "VUT_Usage"):
+        #    self.lc.apiversion = 2.1
+        elif hasattr(lib, "VSM_Map"):
             self.lc.apiversion = 2.0
 
         #	# vas.c
@@ -1144,36 +1172,129 @@ class LIBVARNISHAPI20:
         #
         #	# vut.c
         #		VUT_Arg;
-        self.lc.VUT_Arg = lib.VUT_Arg
-        self.lc.VUT_Arg.argtypes = [POINTER(VUT), c_int, c_char_p]
+        if self.lc.apiversion < 2.2:
+            self.lc.VUT_Arg = lib.VUT_Arg
+            self.lc.VUT_Arg.argtypes = [POINTER(VUT), c_int, c_char_p]
 
-        #		VUT_Error;
-        self.lc.VUT_Error = lib.VUT_Error
+            #		VUT_Error;
+            self.lc.VUT_Error = lib.VUT_Error
 
-        #		VUT_Fini;
-        self.lc.VUT_Fini = lib.VUT_Fini
-        self.lc.VUT_Fini.argtypes = [POINTER(POINTER(VUT))]
+            #		VUT_Fini;
+            self.lc.VUT_Fini = lib.VUT_Fini
+            self.lc.VUT_Fini.argtypes = [POINTER(POINTER(VUT))]
 
-        #		VUT_Init;
-        self.lc.VUT_Init = lib.VUT_Init
-        self.lc.VUT_Init.restype = POINTER(VUT)
-        self.lc.VUT_Init.argtypes = [c_char_p, c_int, POINTER(c_char_p), POINTER(vopt_spec)]
+            #		VUT_Init;
+            self.lc.VUT_Init = lib.VUT_Init
+            self.lc.VUT_Init.restype = POINTER(VUT)
+            self.lc.VUT_Init.argtypes = [c_char_p, c_int, POINTER(c_char_p), POINTER(vopt_spec)]
 
-        #		VUT_Main;
-        self.lc.VUT_Main = lib.VUT_Main
-        self.lc.VUT_Main.argtypes = [POINTER(VUT)]
+            #		VUT_Main;
+            self.lc.VUT_Main = lib.VUT_Main
+            self.lc.VUT_Main.argtypes = [POINTER(VUT)]
 
-        #		VUT_Setup;
-        self.lc.VUT_Setup = lib.VUT_Setup
-        self.lc.VUT_Setup.argtypes = [POINTER(VUT)]
+            #		VUT_Setup;
+            self.lc.VUT_Setup = lib.VUT_Setup
+            self.lc.VUT_Setup.argtypes = [POINTER(VUT)]
 
-        #		VUT_Signal;
-        self.lc.VUT_Signal = lib.VUT_Signal
-        self.lc.VUT_Signal.argtypes = [VUT_sighandler_f]
+            #		VUT_Signal;
+            self.lc.VUT_Signal = lib.VUT_Signal
+            self.lc.VUT_Signal.argtypes = [VUT_sighandler_f]
 
-        #		VUT_Signaled;
-        self.lc.VUT_Signaled = lib.VUT_Signaled
-        self.lc.VUT_Signaled.argtypes = [POINTER(VUT), c_int]
+            #		VUT_Signaled;
+            self.lc.VUT_Signaled = lib.VUT_Signaled
+            self.lc.VUT_Signaled.argtypes = [POINTER(VUT), c_int]
+        else:
+            self.lc.VUT_Arg = lib.VUT_Arg
+            self.lc.VUT_Arg.argtypes = [POINTER(VUT_22), c_int, c_char_p]
+
+            #		VUT_Error;
+            self.lc.VUT_Error = lib.VUT_Error
+
+            #		VUT_Fini;
+            self.lc.VUT_Fini = lib.VUT_Fini
+            self.lc.VUT_Fini.argtypes = [POINTER(POINTER(VUT_22))]
+
+            #		VUT_Init;
+            self.lc.VUT_Init = lib.VUT_Init
+            self.lc.VUT_Init.restype = POINTER(VUT_22)
+            self.lc.VUT_Init.argtypes = [c_char_p, c_int, POINTER(c_char_p), POINTER(vopt_spec)]
+
+            #		VUT_Main;
+            self.lc.VUT_Main = lib.VUT_Main
+            self.lc.VUT_Main.argtypes = [POINTER(VUT_22)]
+
+            #		VUT_Setup;
+            self.lc.VUT_Setup = lib.VUT_Setup
+            self.lc.VUT_Setup.argtypes = [POINTER(VUT_22)]
+
+            #		VUT_Signal;
+            self.lc.VUT_Signal = lib.VUT_Signal
+            self.lc.VUT_Signal.argtypes = [VUT_sighandler_f]
+
+            #		VUT_Signaled;
+            self.lc.VUT_Signaled = lib.VUT_Signaled
+            self.lc.VUT_Signaled.argtypes = [POINTER(VUT_22), c_int]
+        
+
+        #LIBVARNISHAPI_2.1
+        if self.lc.apiversion < 2.1:
+            return
+
+        #		VUT_Usage;
+        #
+        if self.lc.apiversion < 2.2:
+            self.lc.VUT_Usage = lib.VUT_Usage
+            self.lc.VUT_Usage.argtypes = [POINTER(VUT), POINTER(vopt_spec), c_int]
+        else:
+            self.lc.VUT_Usage = lib.VUT_Usage
+            self.lc.VUT_Usage.argtypes = [POINTER(VUT_22), POINTER(vopt_spec), c_int]
+
+        #LIBVARNISHAPI_2.2
+        if self.lc.apiversion < 2.2:
+            return
+        #		VSIG_int;
+        #
+        #		VSIG_Got_int;
+        #
+            self.lc.VSIG_Got_int = lib.VSIG_Got_int
+            self.lc.VSIG_Got_int.argtypes = [c_int]
+
+        #		VSIG_Arm_int;
+        #
+            self.lc.VSIG_Arm_int = lib.VSIG_Arm_int
+
+        #		VSIG_hup;
+        #
+        #		VSIG_Got_hup;
+        #
+            self.lc.VSIG_Got_hup = lib.VSIG_Got_hup
+            self.lc.VSIG_Got_hup.argtypes = [c_int]
+
+        #		VSIG_Arm_hup;
+        #
+            self.lc.VSIG_Arm_hup = lib.VSIG_Arm_hup
+
+        #		VSIG_term;
+        #
+        #		VSIG_Got_term;
+        #
+            self.lc.VSIG_Got_term = lib.VSIG_Got_term
+            self.lc.VSIG_Got_term.argtypes = [c_int]
+
+        #		VSIG_Arm_term;
+        #
+            self.lc.VSIG_Arm_term = lib.VSIG_Arm_term
+
+        #		VSIG_usr1;
+        #
+        #		VSIG_Got_usr1;
+        #
+            self.lc.VSIG_Got_usr1 = lib.VSIG_Got_usr1
+            self.lc.VSIG_Got_usr1.argtypes = [c_int]
+
+        #		VSIG_Arm_usr1;
+        #
+            self.lc.VSIG_Arm_usr1 = lib.VSIG_Arm_usr1
 
 class LIBVARNISHAPI:
     def __init__(self, lib):
@@ -1209,110 +1330,41 @@ class VSLUtil:
         return self.tag2Var(tag, data)['key']
 
     __tags = {
-        'Debug': '',
-        'Error': '',
-        'CLI': '',
-        'SessOpen': '',
-        'SessClose': '',
-        'BackendOpen': '',  # Change key count at varnish41(4->6)
-        'BackendStart': '', # 4.1.3~
-        'BackendReuse': '',
-        'BackendClose': '',
-        'HttpGarbage': '',
-        'Backend': '',
-        'Length': '',
-        'FetchError': '',
-        'BogoHeader': '',
-        'LostHeader': '',
-        'TTL': '',
-        'Fetch_Body': '',
-        'VCL_acl': '',
-        'VCL_call': '',
-        'VCL_trace': '',
-        'VCL_return': '',
         'ReqStart': 'client.ip',
-        'Hit': '',
-        'HitPass': '',
-        'HitMiss': '',
-        'ExpBan': '',
-        'ExpKill': '',
-        'WorkThread': '',
-        'ESI_xmlerror': '',
-        'Hash': '',  # Change log data type(str->bin)
-        'Backend_health': '',
-        'VCL_Log': '',
-        'VCL_Error': '',
-        'Gzip': '',
-        'Link': '',
-        'Begin': '',
-        'End': '',
-        'VSL': '',
-        'Storage': '',
-        'Timestamp': '',
-        'ReqAcct': '',
-        'ESI_BodyBytes': '',  # Only Varnish40X
-        'PipeAcct': '',
-        'BereqAcct': '',
         'ReqMethod': 'req.method',
         'ReqURL': 'req.url',
         'ReqProtocol': 'req.proto',
-        'ReqStatus': '',
-        'ReqReason': '',
         'ReqHeader': 'req.http.',
         'ReqUnset': 'unset req.http.',
-        'ReqLost': '',
-        'RespMethod': '',
-        'RespURL': '',
         'RespProtocol': 'resp.proto',
         'RespStatus': 'resp.status',
         'RespReason': 'resp.reason',
         'RespHeader': 'resp.http.',
         'RespUnset': 'unset resp.http.',
-        'RespLost': '',
         'BereqMethod': 'bereq.method',
         'BereqURL': 'bereq.url',
         'BereqProtocol': 'bereq.proto',
-        'BereqStatus': '',
-        'BereqReason': '',
         'BereqHeader': 'bereq.http.',
         'BereqUnset': 'unset bereq.http.',
-        'BereqLost': '',
-        'BerespMethod': '',
-        'BerespURL': '',
         'BerespProtocol': 'beresp.proto',
         'BerespStatus': 'beresp.status',
         'BerespReason': 'beresp.reason',
         'BerespHeader':   'beresp.http.',
         'BerespUnset':    'unset beresp.http.',
-        'BerespLost':     '',
-        'ObjMethod':      '',
-        'ObjURL':         '',
         'ObjProtocol':    'obj.proto',
         'ObjStatus': 'obj.status',
         'ObjReason': 'obj.reason',
         'ObjHeader': 'obj.http.',
         'ObjUnset':     'unset obj.http.',
-        'ObjLost':      '',
-        'Proxy':        '',  # Only Varnish41x
-        'ProxyGarbage': '',  # Only Varnish41x
-        'VfpAcct':      '',  # Only Varnish41x
-        'Witness':      '',  # Only Varnish41x
-        'H2RxHdr':   '',  # Only Varnish50x
-        'H2RxBody':  '',  # Only Varnish50x
-        'H2TxHdr':   '',  # Only Varnish50x
-        'H2TxBody':  '',  # Only Varnish50x
     }
 
 
 class VarnishAPI:
 
-    def __init__(self, sopath='libvarnishapi.so.1'):
+    def __init__(self, sopath='libvarnishapi.so'):
         self.lib = cdll[sopath]
         self.lva = LIBVARNISHAPI(self.lib)
         self.defi = VarnishAPIDefine40()
-        self._cb = None
-        self.vsm = self.lva.VSM_New()
-        self.d_opt = 0
 
         VSLTAGS = c_char_p * 256
         self.VSL_tags = []
@@ -1352,6 +1404,13 @@ class VarnishAPI:
             data = string_at(ptr, length + 8)[8:-1].decode("utf8", "replace")
         return data
 
+class VarnishVSM(VarnishAPI):
+
+    def __init__(self, sopath='libvarnishapi.so'):
+        VarnishAPI.__init__(self, sopath)
+        self.vsm = self.lva.VSM_New()
+        self.d_opt = 0
+
     def ArgDefault(self, op, arg):
         if self.lva.apiversion >= 2.0:
             if op == "n":
@@ -1387,10 +1446,141 @@ class VarnishAPI:
                 self.vsm = 0
 
 
-class VarnishStat(VarnishAPI):
 
-    def __init__(self, opt='', sopath='libvarnishapi.so.1'):
+
+class VarnishVUT(Thread, VarnishAPI):
+    def __init__(self,
+                 opt=[],
+                 progname='VarnishVUTproc',
+                 sopath='libvarnishapi.so'):
+
         VarnishAPI.__init__(self, sopath)
+        if self.lva.apiversion < 2.0:
+            self.error = "Not support LIBVARNISHAPI version (2.0 > %.01f)" % self.lva.apiversion
+            return(0)
+
+        Thread.__init__(self)
+        self.vopt_spec = vopt_spec()
+        self.vut = self.lva.VUT_Init(cast(progname, c_char_p), 0, byref(cast('',c_char_p)), self.vopt_spec)
+        if len(opt) > 0:
+            self.__setArg(opt)
+        self.lva.VUT_Setup(self.vut)
+        self.vut[0].dispatch_f = VSLQ_dispatch_f(self._callBack)
+
+    def _callBack(self, vsl, pt, fo):
+        raise NotImplementedError
+
+    def waitSignal(self):
+        if self.lva.apiversion < 2.2:
+            while 1:
+                signal.pause()
+
+    def run(self):
+        self.lva.VUT_Main(self.vut)
+        self.lva.VUT_Fini(self.vut)
+
+    def __setArg(self, opt):
+        # XXX args from vopt_spec
+        opts, args = getopt.getopt(opt, "bcCdx:X:r:q:N:n:I:i:g:k:t:T:")
+        error = 0
+        for o in opts:
+            if o[0][0] != '-':
+                continue
+            arg = ""
+            if o[1] and o[1][0] != '-':
+                arg = o[1].encode("utf8", "replace")
+            op = o[0].lstrip('-')
+            self.lva.VUT_Arg(self.vut, ord(op[0]), arg)
+
+    def Fini(self):
+        self.__stop()
+        self.join()
+
+    def __stop(self):
+        if self.lva.apiversion < 2.2:
+            self.vut[0].sigint = 1
+        else:
+            self.lva.VSIG_Arm_int()
+
+
+class VarnishLogVUT(VarnishVUT):
+    def __init__(self,
+                 opt=[],
+                 progname='VarnishVUTproc',
+                 sopath='libvarnishapi.so', dataDecode=True):
+        VarnishVUT.__init__(self, opt, progname, sopath)
+        self.util = VSLUtil()
+        self.dataDecode = dataDecode
+
+    def Dispatch(self, cb=None, priv=None, maxread=1, vxidcb=None, groupcb=None):
+        self._cb = cb
+        self._vxidcb = vxidcb
+        self._groupcb = groupcb
+        self._priv = priv
+        self.start()
+
+    def _callBack(self, vsl, pt, fo):
+        idx = -1
+        cbexec_v = 0
+        cbexec_g = 0
+        binflag = self.defi.SLT_F_UNSAFE or self.defi.SLT_F_BINARY
+        while 1:
+            idx += 1
+            t = pt[idx]
+            if not bool(t):
+                break
+
+            tra = t[0]
+            cbd = {
+                'level': tra.level,
+                'vxid': tra.vxid,
+                'vxid_parent': tra.vxid_parent,
+                'reason': tra.reason,
+                'type': None,
+                'transaction_type': tra.type,
+            }
+            cbexec_v = 0
+            while 1:
+                i = self.lva.VSL_Next(tra.c)
+                if i < 0:
+                    return (i)
+                if i == 0:
+                    break
+                if not self.lva.VSL_Match(self.vut[0].vsl, tra.c):
+                    continue
+                cbexec_v = 1
+                cbexec_g = 1
+
+                # decode length tag type(thread)...
+                ptr = tra.c[0].rec.ptr
+                cbd['length'] = ptr[0] & 0xffff
+                cbd['tag'] = self.VSL_TAG(ptr)
+                if cbd['type'] is None:
+                    if ptr[1] & 0x40000000: #1<<30
+                        cbd['type'] = 'c'
+                    elif ptr[1] & 0x80000000: #1<<31
+                        cbd['type'] = 'b'
+                    else:
+                        cbd['type'] = '-'
+                cbd['isbin'] = self.VSL_tagflags[cbd['tag']] & binflag
+                isbin = cbd['isbin'] & binflag or not self.dataDecode
+                cbd['data'] = self.VSL_DATA(ptr, isbin)
+
+                if self._cb is not None:
+                    self._cb(self, cbd, self._priv)
+            if self._vxidcb is not None and cbexec_v:
+                self._vxidcb(self, self._priv)
+
+        if self._groupcb is not None and cbexec_g:
+            self._groupcb(self, self._priv)
+
+        return(0)
+
+
+class VarnishStat(VarnishVSM):
+
+    def __init__(self, opt='', sopath='libvarnishapi.so'):
+        VarnishVSM.__init__(self, sopath)
         self.name = ''
         if len(opt) > 0:
             self.__setArg(opt)
@@ -1404,7 +1594,7 @@ class VarnishStat(VarnishAPI):
     def Fini(self):
         if self.lva.apiversion >= 2.0:
             self.lva.VSC_Destroy(byref(cast(self.vsc, c_void_p)), self.vsm)
-        VarnishAPI.Fini(self)
+        VarnishVSM.Fini(self)
 
     def __Setup20(self):
         if self.lva.VSM_Attach(self.vsm, 2):
@@ -1434,7 +1624,7 @@ class VarnishStat(VarnishAPI):
 
     def __Arg(self, op, arg):
         # default
-        i = VarnishAPI.ArgDefault(self, op, arg)
+        i = VarnishVSM.ArgDefault(self, op, arg)
         if i is not None:
             return(i)
 
@@ -1475,13 +1665,13 @@ class VarnishStat(VarnishAPI):
             self.lva.VSC_Iter(self.vsm, None, VSC_iter_f(self._getstat10), None)
         return self._buf
 
+class VarnishLog(VarnishVSM):
 
-class VarnishLog(VarnishAPI):
-
-    def __init__(self, opt='', sopath='libvarnishapi.so.1', dataDecode=True):
-        VarnishAPI.__init__(self, sopath)
+    def __init__(self, opt='', sopath='libvarnishapi.so', dataDecode=True):
+        VarnishVSM.__init__(self, sopath)
 
         self.vut = VSLUtil()
+        self.util = self.vut
         self.vsl = self.lva.VSL_New()
         self.vslq = None
         self.__g_arg = 0
@@ -1489,9 +1679,14 @@ class VarnishLog(VarnishAPI):
         self.__r_arg = 0
         self.name = ''
         self.dataDecode = dataDecode
+        self._cb = None
 
         if len(opt) > 0:
             self.__setArg(opt)
+        if self.d_opt:
+            self.cursor_opt = self.defi.VSL_COPT_TAILSTOP | self.defi.VSL_COPT_BATCH
+        else:
+            self.cursor_opt = self.defi.VSL_COPT_TAIL | self.defi.VSL_COPT_BATCH
             
         if self.lva.apiversion >= 2.0:
             self.__Setup20()
@@ -1517,7 +1712,7 @@ class VarnishLog(VarnishAPI):
         return(1)
 
     def __Arg(self, op, arg):
-        i = VarnishAPI.ArgDefault(self, op, arg)
+        i = VarnishVSM.ArgDefault(self, op, arg)
         if i is not None:
             return(i)
 
@@ -1568,13 +1763,7 @@ class VarnishLog(VarnishAPI):
                 return(0)
             #self.name = self.lva.VSM_Name(self.vsm)
 
-            if self.d_opt:
-                self.cursor_opt = self.defi.VSL_COPT_TAILSTOP | self.defi.VSL_COPT_BATCH
-            else:
-                self.cursor_opt = self.defi.VSL_COPT_TAIL | self.defi.VSL_COPT_BATCH
-
-            c = self.lva.VSL_CursorVSM(
-                self.vsl, self.vsm, self.cursor_opt)
+            c = self.lva.VSL_CursorVSM(self.vsl, self.vsm, self.cursor_opt)
                 
             self.lva.VSLQ_SetCursor(self.vslq, byref(cast(c, c_void_p)))
             self.lva.VSL_ResetError(self.vsl)
@@ -1595,13 +1784,7 @@ class VarnishLog(VarnishAPI):
                 return(0)
             self.name = self.lva.VSM_Name(self.vsm)
 
-            if self.d_opt:
-                tail = self.defi.VSL_COPT_TAILSTOP
-            else:
-                tail = self.defi.VSL_COPT_TAIL
-
-            c = self.lva.VSL_CursorVSM(
-                self.vsl, self.vsm, tail | self.defi.VSL_COPT_BATCH)
+            c = self.lva.VSL_CursorVSM(self.vsl, self.vsm, self.cursor_opt)
 
         if not c:
             self.error = "Can't open log (%s)" % self.lva.VSL_Error(self.vsl).decode("utf8", "replace")
@@ -1624,9 +1807,7 @@ class VarnishLog(VarnishAPI):
                 if self.lva.VSM_Open(self.vsm):
                     self.lva.VSM_ResetError(self.vsm)
                     return(1)
-                c = self.lva.VSL_CursorVSM(
-                    self.vsl, self.vsm,
-                    self.defi.VSL_COPT_TAIL | self.defi.VSL_COPT_BATCH)
+                c = self.lva.VSL_CursorVSM(self.vsl, self.vsm, self.cursor_opt)
                 if not c:
                     self.lva.VSM_ResetError(self.vsm)
                     self.lva.VSM_Close(self.vsm)
@@ -1716,7 +1897,7 @@ class VarnishLog(VarnishAPI):
         if self.vsl:
             self.lva.VSL_Delete(self.vsl)
             self.vsl = 0
-        VarnishAPI.Fini(self)
+        VarnishVSM.Fini(self)
 
     def __VSL_Arg(self, opt, arg='\0'):
         return self.lva.VSL_Arg(self.vsl, ord(opt), arg)
@@ -1726,6 +1907,9 @@ class VarnishLog(VarnishAPI):
 
     def _callBack(self, vsl, pt, fo):
         idx = -1
+        cbexec_v = 0
+        cbexec_g = 0
+        binflag = self.defi.SLT_F_UNSAFE or self.defi.SLT_F_BINARY
         while 1:
             idx += 1
             t = pt[idx]
@@ -1741,6 +1925,7 @@ class VarnishLog(VarnishAPI):
                 'type': None,
                 'transaction_type': tra.type,
             }
+            cbexec_v = 0
             while 1:
                 i = self.lva.VSL_Next(tra.c)
                 if i < 0:
@@ -1749,6 +1934,8 @@ class VarnishLog(VarnishAPI):
                     break
                 if not self.lva.VSL_Match(self.vsl, tra.c):
                     continue
+                cbexec_v = 1
+                cbexec_g = 1
 
                 # decode length tag type(thread)...
                 ptr = tra.c[0].rec.ptr
@@ -1761,16 +1948,16 @@ class VarnishLog(VarnishAPI):
                         cbd['type'] = 'b'
                     else:
                         cbd['type'] = '-'
-                cbd['isbin'] = self.VSL_tagflags[cbd['tag']] & self.defi.SLT_F_BINARY
-                isbin = cbd['isbin'] == self.defi.SLT_F_BINARY or not self.dataDecode
+                cbd['isbin'] = self.VSL_tagflags[cbd['tag']] & binflag
+                isbin = cbd['isbin'] & binflag or not self.dataDecode
                 cbd['data'] = self.VSL_DATA(ptr, isbin)
 
                 if self._cb is not None:
                     self._cb(self, cbd, self._priv)
-            if self._vxidcb is not None:
+            if self._vxidcb is not None and cbexec_v:
                 self._vxidcb(self, self._priv)
 
-        if self._groupcb:
+        if self._groupcb is not None and cbexec_g:
             self._groupcb(self, self._priv)
 
         return(0)
