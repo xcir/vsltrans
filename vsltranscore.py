@@ -893,7 +893,7 @@ class vsl2chunk(v4filter):
                 time.sleep(0.1)
             if ret < -3:
                 print(self.vap.error)
-                exit(ret)
+                exit(1)
 
     def vapCallBack(self, vap, cbd, priv):
         ttag = vap.VSL_tags[cbd['tag']]
