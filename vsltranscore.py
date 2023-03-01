@@ -891,6 +891,9 @@ class vsl2chunk(v4filter):
             ret = self.vap.Dispatch(self.vapCallBack)
             if 0 == ret:
                 time.sleep(0.1)
+            if ret < -3:
+                print(self.vap.error)
+                exit(1)
 
     def vapCallBack(self, vap, cbd, priv):
         ttag = vap.VSL_tags[cbd['tag']]
@@ -921,7 +924,7 @@ class vslTrans4:
         if self.source == 'vsl':
             self.idrv = vsl2chunk(opts,self.odrv.getData)
         else:
-            self.idrv   = log2chunk(opts,self.odrv.getData)
+            self.idrv = log2chunk(opts,self.odrv.getData)
             
     def execute(self):
         self.idrv.execute()

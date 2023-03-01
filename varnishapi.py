@@ -1835,8 +1835,11 @@ class VarnishLog(VarnishVSM):
                 self.error = "Log abandoned"
                 #self.lva.VSM_Destroy(POINTER(self.vsm))
                 self.lva.VSM_Close(self.vsm)
-            if i < -2:
+            elif i == -3:
                 self.error = "Log overrun"
+                self.lva.VSM_Close(self.vsm)
+            else:
+                self.error = "Error {} from VSLQ_Dispatch()".format(i)
             return i
 
     def __Dispatch20(self, maxread):
@@ -1876,8 +1879,12 @@ class VarnishLog(VarnishVSM):
                 self.error = "Log abandoned"
                 self.hascursor = 0
                 self.lva.VSLQ_SetCursor(self.vslq, None)
-            if i < -2:
+            elif i == -3:
                 self.error = "Log overrun"
+                self.hascursor = 0
+                self.lva.VSLQ_SetCursor(self.vslq, None)
+            else:
+                self.error = "Error {} from VSLQ_Dispatch()".format(i)
             return i
 
     def Dispatch(self, cb=None, priv=None, maxread=1, vxidcb=None, groupcb=None):
